@@ -11,6 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+using patrons_web_api.Database;
+using patrons_web_api.Services;
+
 namespace patrons_web_api
 {
     public class Startup
@@ -25,6 +28,11 @@ namespace patrons_web_api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // Register injectables for IoC injector
+            services.AddSingleton<IPatronsDatabase, MongoDatabase>();
+            services.AddSingleton<ManagerService, ManagerService>();
+
+            // Register API controllers
             services.AddControllers();
         }
 
