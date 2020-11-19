@@ -1,4 +1,8 @@
+using System.Collections.Concurrent;
 using System;
+using System.Threading.Tasks;
+
+using patrons_web_api.Models.MongoDatabase;
 
 using patrons_web_api.Database;
 
@@ -16,9 +20,9 @@ namespace patrons_web_api.Services
             _database = db;
         }
 
-        public string getHelloWorldFromDatabase()
+        public async Task<Venue> getPublicVenueInfo(string venueId)
         {
-            return _database.getHelloWorld();
+            return await _database.getVenueManagerInfo(venueId);
         }
     }
 }

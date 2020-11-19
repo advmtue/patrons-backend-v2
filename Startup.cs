@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using patrons_web_api.Database;
 using patrons_web_api.Services;
@@ -28,9 +29,17 @@ namespace patrons_web_api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // Configs
+            services.Configure<MongoDatabaseSettings>(
+                Configuration.GetSection(nameof(MongoDatabaseSettings))
+            );
+
+            services.AddSingleton<IMongoDatabaseSettings>(sp => sp.GetRequiredService<IOptions<MongoDatabaseSettings>>().Value);
+
             // Register injectables for IoC injector
             services.AddSingleton<IPatronsDatabase, MongoDatabase>();
             services.AddSingleton<ManagerService, ManagerService>();
+            services.AddSingleton<VenueService, VenueService>();
 
             // Register API controllers
             services.AddControllers();

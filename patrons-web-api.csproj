@@ -5,5 +5,9 @@
     <RootNamespace>patrons_web_api</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" Version="2.11.4" />
+  </ItemGroup>
+
 
 </Project>

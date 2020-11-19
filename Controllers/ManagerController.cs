@@ -20,7 +20,7 @@ namespace patrons_web_api.Controllers
         [HttpGet("test")]
         public async Task<IActionResult> GetTest()
         {
-            return Ok(_managerService.getHelloWorldFromDatabase());
+            return Ok(await _managerService.getPublicVenueInfo("centra"));
         }
     }
 }
