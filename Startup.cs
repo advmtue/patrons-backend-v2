@@ -29,6 +29,14 @@ namespace patrons_web_api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddCors(options =>
+            {
+                options.AddPolicy("allowAll", builder =>
+                {
+                    builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                });
+            });
+
             // Configs
             services.Configure<MongoDatabaseSettings>(
                 Configuration.GetSection(nameof(MongoDatabaseSettings))
@@ -38,8 +46,9 @@ namespace patrons_web_api
 
             // Register injectables for IoC injector
             services.AddSingleton<IPatronsDatabase, MongoDatabase>();
-            services.AddSingleton<ManagerService, ManagerService>();
-            services.AddSingleton<VenueService, VenueService>();
+            services.AddSingleton<ManagerService>();
+            services.AddSingleton<VenueService>();
+            services.AddSingleton<PatronService>();
 
             // Register API controllers
             services.AddControllers();
@@ -56,6 +65,8 @@ namespace patrons_web_api
             // app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseCors("allowAll");
 
             app.UseAuthorization();
 

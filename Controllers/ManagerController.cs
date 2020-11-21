@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 
 using patrons_web_api.Services;
+using patrons_web_api.Database;
+using patrons_web_api.Models.Transfer.Response;
 
 namespace patrons_web_api.Controllers
 {
@@ -15,12 +17,6 @@ namespace patrons_web_api.Controllers
         {
             // Save refs
             _managerService = managerService;
-        }
-
-        [HttpGet("test")]
-        public async Task<IActionResult> GetTest()
-        {
-            return Ok(await _managerService.getPublicVenueInfo("centra"));
         }
     }
 }

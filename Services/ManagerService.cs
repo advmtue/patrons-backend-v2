@@ -19,10 +19,5 @@ namespace patrons_web_api.Services
             // Save refs
             _database = db;
         }
-
-        public async Task<Venue> getPublicVenueInfo(string venueId)
-        {
-            return await _database.getVenueManagerInfo(venueId);
-        }
     }
 }

@@ -4,9 +4,10 @@ using patrons_web_api.Services;
 using System.Threading.Tasks;
 using patrons_web_api.Database;
 
+using patrons_web_api.Models.Transfer.Response;
+
 namespace patrons_web_api.Controllers
 {
-
     [Route("venue")]
     [ApiController]
     public class VenueController : ControllerBase
@@ -29,7 +30,18 @@ namespace patrons_web_api.Controllers
             catch (VenueNotFoundException e)
             {
                 Console.WriteLine($"[VenueController] Failed to lookup venue. [vId: {venueId}]");
-                return NotFound();
+                Console.WriteLine(e.Message);
+
+                var error = APIError.VenueNotFound();
+
+                return BadRequest(error);
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"[VenueController] Failed to lookup venue. [e: {e.Message}]");
+
+                return BadRequest(APIError.UnknownError());
             }
         }
     }

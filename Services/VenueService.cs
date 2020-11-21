@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using patrons_web_api.Models.MongoDatabase;
 using patrons_web_api.Database;
+
+using patrons_web_api.Models.Transfer.Response;
 
 namespace patrons_web_api.Services
 {
@@ -14,14 +17,9 @@ namespace patrons_web_api.Services
             _database = database;
         }
 
-        public Task<VenueSimple> getVenueById(string venueId)
+        public async Task<VenueResponse> getVenueById(string venueId)
         {
-            return _database.getVenueInfo(venueId);
-        }
-
-        public Task<Venue> getVenueManagerInfo(string venueId)
-        {
-            return _database.getVenueManagerInfo(venueId);
+            return await _database.getPatronVenueView(venueId);
         }
     }
 }

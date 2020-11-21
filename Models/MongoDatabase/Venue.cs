@@ -1,47 +1,45 @@
+using System.Collections.Generic;
+
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace patrons_web_api.Models.MongoDatabase
 {
-
-    public class VenueSimple
+    public class VenueBase
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; }
-
+        // URL Mapping
         [BsonElement("venueId")]
         public string VenueId { get; set; }
 
-        [BsonElement("logoImgSrc")]
-        public string LogoImgSrc { get; set; }
-
+        // Display information
         [BsonElement("name")]
         public string Name { get; set; }
 
         [BsonElement("byLine")]
         public string ByLine { get; set; }
 
-        [BsonElement("status")]
-        public string Status { get; set; }
+        [BsonElement("logoImgSrc")]
+        public string LogoImgSrc { get; set; }
+
+
+        // Useful for venues which want to to have URL list patrons.at/venue and not patrons.at/venue/area
+        [BsonElement("defaultAreaIndex")]
+        public int DefaultAreaIndex { get; set; }
     }
 
-    public class Venue : VenueSimple
+    public class VenueDocument : VenueBase
     {
-        [BsonElement("password")]
-        public string Password { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; }
 
-        public VenueSimple toVenueSimple()
-        {
-            return new VenueSimple
-            {
-                Id = this.Id,
-                VenueId = this.VenueId,
-                LogoImgSrc = this.LogoImgSrc,
-                Name = this.Name,
-                ByLine = this.ByLine,
-                Status = this.Status
-            };
-        }
+        [BsonElement("areas")]
+        public List<AreaDocument> Areas { get; set; }
+    }
+
+    public class Venue : VenueBase
+    {
+        [BsonElement("areas")]
+        public List<AreaBase> Areas { get; set; }
     }
 }
