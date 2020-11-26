@@ -25,7 +25,7 @@ namespace patrons_web_api.Models.MongoDatabase
         {
             return new DiningPatronDocument
             {
-                Id = (new ObjectId()).ToString(),
+                Id = ObjectId.GenerateNewId().ToString(),
                 FirstName = p.FirstName,
                 PhoneNumber = p.PhoneNumber
             };

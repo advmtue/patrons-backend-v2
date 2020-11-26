@@ -10,14 +10,14 @@ namespace patrons_web_api.Models.MongoDatabase
         [BsonElement("tableNumber")]
         public string TableNumber { get; set; }
 
-        [BsonElement("firstCheckInTime")]
-        public long FirstCheckInTime { get; set; }
+        [BsonElement("createdAt")]
+        public long CreatedAt { get; set; }
 
-        [BsonElement("status")]
-        public string Status { get; set; }
+        [BsonElement("isActive")]
+        public bool IsActive { get; set; }
 
-        [BsonElement("venueId")]
-        public string VenueId { get; set; }
+        [BsonElement("serviceId")]
+        public string ServiceId { get; set; }
     }
 
     public class Sitting : SittingBase

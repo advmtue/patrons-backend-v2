@@ -23,6 +23,9 @@ namespace patrons_web_api.Models.MongoDatabase
         [BsonElement("password")]
         public string Password { get; set; }
 
+        [BsonElement("salt")]
+        public string Salt { get; set; }
+
         [BsonElement("isPasswordReset")]
         public bool IsPasswordReset { get; set; }
     }

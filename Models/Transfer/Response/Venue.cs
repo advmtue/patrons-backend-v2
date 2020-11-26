@@ -27,5 +27,9 @@ namespace patrons_web_api.Models.Transfer.Response
 
         [BsonElement("currentServiceType")]
         public string CurrentServiceType { get; set; }
+
+        [BsonRepresentation(BsonType.ObjectId)]
+        [BsonElement("currentServiceId")]
+        public string CurrentServiceId { get; set; }
     }
 }

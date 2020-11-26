@@ -28,19 +28,10 @@ namespace patrons_web_api.Models.MongoDatabase
         public bool IsActive { get; set; }
     }
 
-    public class Service : ServiceBase
-    {
-        [BsonElement("sittings")]
-        public List<Sitting> Sittings { get; set; }
-    }
-
     public class ServiceDocument : ServiceBase
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; }
-
-        [BsonElement("sittings")]
-        public List<SittingDocument> Sittings { get; set; }
     }
 }

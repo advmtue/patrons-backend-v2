@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
 
 using MongoDB.Bson;
@@ -10,15 +11,18 @@ namespace patrons_web_api.Models.MongoDatabase
         // Required contact information
         [Required]
         [BsonElement("firstName")]
+        [JsonPropertyName("firstName")]
         public string FirstName { get; set; }
 
         [Required]
         [BsonElement("lastName")]
-        public string LastName;
+        [JsonPropertyName("lastName")]
+        public string LastName { get; set; }
 
         [Required]
         [BsonElement("phoneNumber")]
-        public string PhoneNumber;
+        [JsonPropertyName("phoneNumber")]
+        public string PhoneNumber { get; set; }
     }
 
     public class GamingPatronDocument : GamingPatron

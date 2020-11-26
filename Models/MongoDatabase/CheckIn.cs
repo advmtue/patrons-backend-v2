@@ -34,7 +34,7 @@ namespace patrons_web_api.Models.MongoDatabase
         {
             CheckInDocument newDocument = new CheckInDocument
             {
-                Id = (new ObjectId()).ToString(),
+                Id = ObjectId.GenerateNewId().ToString(),
                 Time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 People = new List<DiningPatronDocument>()
             };
