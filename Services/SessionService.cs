@@ -16,7 +16,12 @@ namespace patrons_web_api.Services
         int KeyLength { get; set; }
     }
 
-    public class SessionService
+    public interface ISessionService
+    {
+        Task<string> GenerateSessionId();
+    }
+
+    public class SessionService : ISessionService
     {
         private IPatronsDatabase _db;
         public SessionService(IPatronsDatabase db)

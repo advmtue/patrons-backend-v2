@@ -5,8 +5,13 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace patrons_web_api.Models.MongoDatabase
 {
-    public class ManagerBase
+    public class ManagerDocument
     {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; }
+
+        // --- Contact information
         [BsonElement("firstName")]
         public string FirstName { get; set; }
 
@@ -17,6 +22,7 @@ namespace patrons_web_api.Models.MongoDatabase
         public string Email { get; set; }
 
 
+        // --- Login information
         [BsonElement("username")]
         public string Username { get; set; }
 
@@ -28,15 +34,10 @@ namespace patrons_web_api.Models.MongoDatabase
 
         [BsonElement("isPasswordReset")]
         public bool IsPasswordReset { get; set; }
-    }
 
-    public class ManagerDocument : ManagerBase
-    {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; }
-
+        // --- Access information
         [BsonElement("venueIds")]
         public List<ObjectId> VenueIds { get; set; }
+
     }
 }

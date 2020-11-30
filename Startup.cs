@@ -64,11 +64,11 @@ namespace patrons_web_api
 
             // Register injectables for IoC injector
             services.AddSingleton<IPatronsDatabase, MongoDatabase>();
-            services.AddSingleton<ManagerService>();
-            services.AddSingleton<VenueService>();
-            services.AddSingleton<PatronService>();
+            services.AddSingleton<IManagerService, ManagerService>();
+            services.AddSingleton<IVenueService, VenueService>();
+            services.AddSingleton<IPatronService, PatronService>();
             services.AddSingleton<PasswordService>();
-            services.AddSingleton<SessionService>();
+            services.AddSingleton<ISessionService, SessionService>();
 
             // Register API controllers
             services.AddControllers();

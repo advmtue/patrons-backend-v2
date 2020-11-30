@@ -1,12 +1,12 @@
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 using MongoDB.Bson;
 
-
-using patrons_web_api.Models.Transfer.Request;
-using patrons_web_api.Models.Transfer.Response;
+using patrons_web_api.Controllers;
+using patrons_web_api.Models.MongoDatabase;
 using patrons_web_api.Database;
 
 namespace patrons_web_api.Services
@@ -20,20 +20,34 @@ namespace patrons_web_api.Services
         public string AccessLevel { get; set; }
     }
 
-    public class ManagerService
+    public interface IManagerService
+    {
+        Task<ManagerLoginResponse> Login(ManagerLoginRequest loginRequest, string ipAddress);
+        Task<List<ManagerVenueDocument>> GetVenues(string managerId);
+        Task<ManagerResponse> GetSelf(string managerId);
+        Task UpdatePassword(string managerId, string newPassword);
+        Task<string> StartService(string managerId, string venueId, string areaId);
+        Task StopService(string managerId, string venueId, string areaId);
+    };
+
+    public class ManagerService : IManagerService
     {
         private IPatronsDatabase _database;
         private PasswordService _password;
-        private SessionService _session;
+        private ISessionService _session;
 
-        public ManagerService(IPatronsDatabase db, PasswordService pwd, SessionService session)
+        public ManagerService(IPatronsDatabase db, PasswordService pwd, ISessionService session)
         {
-            Console.WriteLine("Instantiated new managerservice");
-
-            // Save refs
             _database = db;
             _password = pwd;
             _session = session;
+        }
+
+        private async Task _EnsureManagerCanAccessVenue(string managerId, string venueId)
+        {
+            bool managerCanAccess = await _database.ManagerCanAccessVenue(managerId, venueId);
+
+            if (!managerCanAccess) throw new NoAccessException();
         }
 
         public async Task<ManagerLoginResponse> Login(ManagerLoginRequest loginInfo, string ipAddress)
@@ -108,6 +122,20 @@ namespace patrons_web_api.Services
 
             // Deactivate all manager sessions
             await _database.ManagerDeactivateSessions(manager.Id);
+        }
+
+        public async Task<List<ManagerVenueDocument>> GetVenues(string managerId)
+        {
+            return await _database.GetManagerVenues(managerId);
+        }
+
+        public async Task<string> StartService(string managerId, string venueId, string areaId)
+        {
+            return await Task.FromResult("asdf");
+        }
+
+        public async Task StopService(string managerId, string venueId, string areaId)
+        {
         }
     }
 }

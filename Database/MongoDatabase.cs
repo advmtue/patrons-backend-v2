@@ -1,3 +1,4 @@
+using System.Data;
 using System;
 using System.Collections.Generic;
 using MongoDB.Driver;
@@ -5,8 +6,6 @@ using MongoDB.Bson;
 using System.Threading.Tasks;
 
 using patrons_web_api.Models.MongoDatabase;
-using patrons_web_api.Models.Transfer.Request;
-using patrons_web_api.Models.Transfer.Response;
 
 namespace patrons_web_api.Database
 {
@@ -23,6 +22,13 @@ namespace patrons_web_api.Database
     public class BadLoginException : Exception { }
     public class SessionExistsException : Exception { }
     public class SessionNotFoundException : Exception { }
+    public class NoAccessException : Exception { }
+    public class ServiceIsAlreadyActiveException : Exception { }
+
+    public class ManagerVenueAggregation
+    {
+        public List<PublicVenueDocument> venues { get; set; }
+    }
 
     public class MongoDatabaseSettings : IMongoDatabaseSettings
     {
@@ -42,13 +48,20 @@ namespace patrons_web_api.Database
         string UseDatabase { get; set; }
     }
 
+    public class PatronsCollectionNames
+    {
+        public const string Venue = "venue";
+        public const string Service = "service";
+        public const string Manager = "manager";
+        public const string Session = "session";
+    }
+
     public class MongoDatabase : IPatronsDatabase
     {
-        private IMongoCollection<VenueDocument> _venueCollection;
-        private IMongoCollection<BsonDocument> _venueAggregationCollection;
-        private IMongoCollection<ServiceDocument> _serviceCollection;
-        private IMongoCollection<GamingPatronDocument> _gamingPatronCollection;
-        private IMongoCollection<SittingDocument> _sittingCollection;
+        private IMongoCollection<PublicVenueDocument> _venueCollection;
+        private IMongoCollection<BsonDocument> _serviceCollection;
+        private IMongoCollection<DiningServiceDocument> _diningServiceCollection;
+        private IMongoCollection<GamingServiceDocument> _gamingServiceCollection;
         private IMongoCollection<ManagerDocument> _managerCollection;
         private IMongoCollection<SessionDocument> _sessionCollection;
 
@@ -61,19 +74,27 @@ namespace patrons_web_api.Database
 
             var database = client.GetDatabase(settings.UseDatabase);
 
-            _venueCollection = database.GetCollection<VenueDocument>("venue");
-            _venueAggregationCollection = database.GetCollection<BsonDocument>("venue");
-            _serviceCollection = database.GetCollection<ServiceDocument>("service");
-            _gamingPatronCollection = database.GetCollection<GamingPatronDocument>("gaming_patron");
-            _sittingCollection = database.GetCollection<SittingDocument>("sitting");
-            _managerCollection = database.GetCollection<ManagerDocument>("manager");
-            _sessionCollection = database.GetCollection<SessionDocument>("session");
+            // Create collection refs
+            _venueCollection = database.GetCollection<PublicVenueDocument>(PatronsCollectionNames.Venue);
+            _serviceCollection = database.GetCollection<BsonDocument>(PatronsCollectionNames.Service);
+            _managerCollection = database.GetCollection<ManagerDocument>(PatronsCollectionNames.Manager);
+            _sessionCollection = database.GetCollection<SessionDocument>(PatronsCollectionNames.Session);
+
+            // Dining and gaming services
+            _diningServiceCollection = database.GetCollection<DiningServiceDocument>(PatronsCollectionNames.Service);
+            _gamingServiceCollection = database.GetCollection<GamingServiceDocument>(PatronsCollectionNames.Service);
         }
 
-        public async Task<VenueDocument> getVenueInfo(string venueId)
+        /// <summary>
+        /// Lookup a venue by unique Id (venue._id)
+        /// </summary>
+        /// <param name="venueId">Venue ObjectId as string</param>
+        /// <returns>Public venue information</returns>
+        public async Task<PublicVenueDocument> GetVenueById(string venueId)
         {
-            // Todo
-            var venue = await _venueCollection.Find(v => v.VenueId == venueId).FirstOrDefaultAsync();
+            var filter = Builders<PublicVenueDocument>.Filter.Eq("_id", new ObjectId(venueId));
+
+            var venue = await _venueCollection.Find(filter).FirstOrDefaultAsync();
 
             if (venue == null)
             {
@@ -83,240 +104,104 @@ namespace patrons_web_api.Database
             return venue;
         }
 
-        public async Task<VenueResponse> getPatronVenueView(string venueId, string indexName = "venueId")
+        /// <summary>
+        /// Lookup a venue by unique url string (venue.venueId)
+        /// </summary>
+        /// <param name="urlName">Venue.venueId</param>
+        /// <returns>Public venue information</returns>
+        public async Task<PublicVenueDocument> GetVenueByURLName(string urlName)
         {
-            // TODO Find a neater way to write this aggregation pipeline
-            BsonDocument matchDocument;
-            if (indexName == "_id")
+            var filter = Builders<PublicVenueDocument>.Filter.Eq("venueId", urlName);
+
+            var venue = await _venueCollection.Find(filter).FirstOrDefaultAsync();
+
+            if (venue == null)
             {
-                matchDocument = new BsonDocument { { indexName, new ObjectId(venueId) } };
-            }
-            else
-            {
-                matchDocument = new BsonDocument { { indexName, venueId } };
+                throw new VenueNotFoundException();
             }
 
-            var pipeline = PipelineDefinition<BsonDocument, VenueResponse>.Create(new BsonDocument[] {
-                new BsonDocument
-                {
-                    { "$match", matchDocument },
-                },
-                new BsonDocument {
-                    {
-                        "$unwind", "$areas"
-                    }
-                },
-                new BsonDocument
-                {
-                    {
-                        "$lookup", new BsonDocument {
-                            { "from", "service" },
-                            { "localField", "areas._id" },
-                            { "foreignField", "areaId" },
-                            { "as", "currentService" },
-                        }
-                    },
-                },
-                // TODO Filter out non-active services
-                new BsonDocument
-                {
-                    {
-                        "$unwind", new BsonDocument {
-                            { "path", "$currentService" },
-                            { "preserveNullAndEmptyArrays", true }
-                        }
-                    },
-                },
-                new BsonDocument
-                {
-                    {
-                        "$addFields", new BsonDocument {
-                            {
-                                "areas.currentServiceType", new BsonDocument {
-                                    { "$ifNull", new BsonArray { "$currentService.type", "NONE" } }
-                                }
-                            },
-                            {
-                                "areas.currentServiceId", new BsonDocument {
-                                    { "$ifNull", new BsonArray { "$currentService._id", "NONE" } }
-                                }
-                            }
-                        }
-                    },
-                },
-                new BsonDocument
-                {
-                    {
-                        "$project", new BsonDocument {
-                            { "currentService", 0 }
-                        }
-                    }
-                },
-                new BsonDocument
-                {
-                    {
-                        "$group", new BsonDocument {
-                            { "_id", "$_id" },
-                            { "a", new BsonDocument {
-                                { "$push", "$areas" }
-                            }},
-                            { "b", new BsonDocument {
-                                { "$mergeObjects", "$$ROOT"}
-                            }}
-                        }
-                    }
-                },
-                new BsonDocument
-                {
-                    {
-                        "$addFields", new BsonDocument {
-                            { "b.areas", "$a" }
-                        }
-                    }
-                },
-                new BsonDocument {
-                    {
-                        "$replaceRoot", new BsonDocument {
-                            { "newRoot", "$b" }
-                        }
-                    }
-                }
-            });
-
-            // Perform aggregation lookup
-            var info = await _venueAggregationCollection.Aggregate<VenueResponse>(pipeline).FirstAsync();
-
-            return info;
+            return venue;
         }
 
-        public async Task GamingCheckIn(string venueId, string areaId, GamingCheckInRequest checkIn)
+        /// <summary>
+        /// Save a gaming check-in by pushing a new patron to the patrons array
+        /// </summary>
+        /// <param name="serviceId">Service unique ID as string</param>
+        /// <param name="patron">New patron</param>
+        /// <returns></returns>
+        public async Task SaveGamingCheckIn(string serviceId, GamingPatronDocument patron)
         {
-            // Check that the venue exists, the area exists, the area is open, the area type is gaming
-            // This will throw an error if the venue doesn't exist
-            var patronVenueView = await this.getPatronVenueView(venueId, "_id");
+            var filter = Builders<GamingServiceDocument>.Filter.Eq("_id", new ObjectId(serviceId));
+            var update = Builders<GamingServiceDocument>.Update.Push("patrons", patron);
 
-            // Find an area that matches the requested areaId
-            var area = patronVenueView.Areas.Find(a => a.Id == areaId);
+            await _gamingServiceCollection.UpdateOneAsync(filter, update);
+        }
 
-            // Existence check
-            if (area == null)
+        /// <summary>
+        /// Create or append a dining check-in, depending on if the table already exists in the service
+        /// </summary>
+        /// <param name="serviceId">Service unique ID as string</param>
+        /// <param name="tableNumber">Table number</param>
+        /// <param name="checkIn">New check-in</param>
+        /// <returns></returns>
+        public async Task CreateOrAppendDiningCheckIn(string serviceId, string tableNumber, CheckInDocument checkIn)
+        {
+            // Create a filter for matching service
+            var serviceFilter = Builders<DiningServiceDocument>.Filter.Eq("_id", new ObjectId(serviceId))
+                & Builders<DiningServiceDocument>.Filter.Eq("isActive", true);
+
+            // Create a $push update
+            var checkInsPushUpdate = Builders<DiningServiceDocument>.Update.Push("sittings.$[table].checkIns", checkIn);
+
+            // Build array filters to match table with number and active status
+            var arrayFilters = new List<ArrayFilterDefinition>
             {
-                throw new AreaNotFoundException();
-            }
+                new BsonDocumentArrayFilterDefinition<DiningServiceDocument>(
+                    new BsonDocument {
+                        { "table.tableNumber", tableNumber },
+                        { "table.isActive", true }
+                    }
+                )
+            };
+            var updateOptions = new UpdateOptions { ArrayFilters = arrayFilters };
 
-            // Check that area is open
-            if (!area.IsOpen)
-            {
-                throw new AreaIsClosedException();
-            }
+            // Attempt to perform the push
+            var updateResult = await _diningServiceCollection.UpdateOneAsync(serviceFilter, checkInsPushUpdate, updateOptions);
 
-            // Check that the area type is gaming
-            // TODO No more magic strings
-            if (area.CurrentServiceType != "GAMING")
-            {
-                throw new WrongAreaServiceTypeException();
-            }
-
-            // Ensure that there is an active service
-            if (area.CurrentServiceId == "NONE")
+            // Service with matching ID does not exist
+            if (updateResult.MatchedCount == 0)
             {
                 throw new ServiceNotFoundException();
             }
 
-            // Create a new GamingPatron document
-            GamingPatronDocument patron = new GamingPatronDocument
+            // If a service was updated nothing else needs to be done
+            if (updateResult.ModifiedCount == 1) return;
+
+            // No service was update, so assume we need to create a new sitting
+            var newSitting = new SittingDocument
             {
                 Id = ObjectId.GenerateNewId().ToString(),
-                FirstName = checkIn.FirstName,
-                LastName = checkIn.LastName,
-                PhoneNumber = checkIn.PhoneNumber,
-                ServiceId = area.CurrentServiceId,
-                CheckInTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                CheckOutTime = -1,
-                IsActive = true
+                TableNumber = tableNumber,
+                CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                IsActive = true,
+                CheckIns = new List<CheckInDocument> { checkIn }
             };
 
-            // Insert into collection
-            await this._gamingPatronCollection.InsertOneAsync(patron);
+            // Create a $push update for sittings
+            var sittingsPushUpdate = Builders<DiningServiceDocument>.Update.Push("sittings", newSitting);
+
+            // Push the sitting to the service
+            await _diningServiceCollection.UpdateOneAsync(serviceFilter, sittingsPushUpdate);
         }
 
-        public async Task DiningCheckIn(string venueId, string areaId, DiningCheckInRequest checkIn)
-        {
-            // Check that the venue exists, the area exists, the area is open, the area type is gaming
-            // This will throw an error if the venue doesn't exist
-            var patronVenueView = await this.getPatronVenueView(venueId, "_id");
-
-            // Find an area that matches the requested areaId
-            var area = patronVenueView.Areas.Find(a => a.Id == areaId);
-
-            // Existence check
-            if (area == null)
-            {
-                throw new AreaNotFoundException();
-            }
-
-            // Check that area is open
-            if (!area.IsOpen)
-            {
-                throw new AreaIsClosedException();
-            }
-
-            // Check that the area type is dining
-            // TODO No more magic strings
-            if (area.CurrentServiceType != "DINING")
-            {
-                throw new WrongAreaServiceTypeException();
-            }
-
-            // Ensure that there is an active service
-            if (area.CurrentServiceId == "NONE")
-            {
-                throw new ServiceNotFoundException();
-            }
-
-            // Create a check in
-            CheckInDocument checkInDocument = CheckInDocument.FromCheckInRequest(checkIn);
-
-            var update = Builders<SittingDocument>.Update.Push("checkIns", checkInDocument);
-
-            // Filter to match
-            var filter = Builders<SittingDocument>.Filter.Eq("serviceId", area.CurrentServiceId)
-                & Builders<SittingDocument>.Filter.Eq("isActive", true)
-                & Builders<SittingDocument>.Filter.Eq("tableNumber", checkIn.TableNumber);
-
-            // Perform update
-            var updateInfo = _sittingCollection.UpdateOne(filter, update);
-
-            // If no update occurred, create a new sitting
-            if (updateInfo.ModifiedCount == 0)
-            {
-                SittingDocument newSitting = new SittingDocument
-                {
-                    TableNumber = checkIn.TableNumber,
-                    CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                    IsActive = true,
-                    ServiceId = area.CurrentServiceId,
-                    CheckIns = new List<CheckInDocument> { checkInDocument }
-                };
-
-                _sittingCollection.InsertOne(newSitting);
-            }
-        }
-
-        public async Task<SittingDocument> FindActiveSittingByServiceAndTable(string serviceId, string tableNumber)
-        {
-            var sitting = await _sittingCollection
-                .Find(sitting => sitting.ServiceId == serviceId && sitting.TableNumber == tableNumber)
-                .FirstOrDefaultAsync();
-
-            if (sitting == null)
-            {
-                throw new SittingNotFoundException();
-            }
-
-            return sitting;
-        }
-
+        /// <summary>
+        /// Find a manager from their username information
+        /// </summary>
+        /// <param name="username">Username</param>
+        /// <returns>The manager with matching username</returns>
+        /// <exception cref="patrons_web_api.Database.ManagerNotFoundException">
+        /// Manager with matching username does not exist
+        /// </exception>
         public async Task<ManagerDocument> GetManagerByUsername(string username)
         {
             var manager = await _managerCollection.Find(m => m.Username == username).FirstOrDefaultAsync();
@@ -350,7 +235,9 @@ namespace patrons_web_api.Database
 
         public async Task<SessionDocument> GetSessionBySessionId(string sessionId)
         {
-            var session = await _sessionCollection.Find(s => s.SessionId == sessionId).FirstOrDefaultAsync();
+            var filter = Builders<SessionDocument>.Filter.Eq("sessionId", sessionId);
+
+            var session = await _sessionCollection.Find(filter).FirstOrDefaultAsync();
 
             if (session == null)
             {
@@ -394,6 +281,88 @@ namespace patrons_web_api.Database
             var update = Builders<SessionDocument>.Update.Set("isActive", false);
 
             await _sessionCollection.UpdateManyAsync(filter, update);
+        }
+
+        private async Task<DiningServiceDocument> GetDiningServiceById(string serviceId)
+        {
+            var filter = Builders<DiningServiceDocument>.Filter.Eq("_id", new ObjectId(serviceId));
+            var service = await _diningServiceCollection.Find(filter).FirstOrDefaultAsync();
+
+            if (service == null)
+            {
+                throw new ServiceNotFoundException();
+            }
+
+            return service;
+        }
+
+        private async Task<GamingServiceDocument> GetGamingServiceById(string serviceId)
+        {
+            var filter = Builders<GamingServiceDocument>.Filter.Eq("_id", new ObjectId(serviceId));
+            var service = await _gamingServiceCollection.Find(filter).FirstOrDefaultAsync();
+
+            if (service == null)
+            {
+                throw new ServiceNotFoundException();
+            }
+
+            return service;
+        }
+
+        public async Task<List<ManagerVenueDocument>> GetManagerVenues(string managerId)
+        {
+            var result = _managerCollection.Aggregate()
+                .Match(m => m.Id.Equals(new ObjectId(managerId)))
+                .Lookup("venue", "venueIds", "_id", "venues")
+                .Project<ManagerVenueAggregation>(new BsonDocument { { "_id", 0 }, { "venues", 1 } });
+
+            var firstResult = result.First().venues;
+
+            // TODO this is very ineffecient and can be drastically improved with an aggregation pipeline
+            // TODO Lookup gaming/dining area activeService
+            // Perform further lookups for active service
+            var managerVenues = new List<ManagerVenueDocument>();
+
+            firstResult.ForEach(v =>
+            {
+                managerVenues.Add(new ManagerVenueDocument(v));
+            });
+
+            // Populate each managervenuedocument.areas.activeService by performing a round trip
+            // This is awful
+            // FIXME
+            foreach (var venue in managerVenues)
+            {
+                foreach (var da in venue.DiningAreas)
+                {
+                    if (da.ActiveService.Id == null) continue;
+                    da.ActiveService = await this.GetDiningServiceById(da.ActiveService.Id.ToString());
+                }
+
+                foreach (var ga in venue.GamingAreas)
+                {
+                    if (ga.ActiveService.Id == null) continue;
+                    ga.ActiveService = await this.GetGamingServiceById(ga.ActiveService.Id.ToString());
+                }
+            }
+
+            return managerVenues;
+        }
+
+        public async Task<bool> ManagerCanAccessVenue(string managerId, string venueId)
+        {
+            var manager = await this.GetManagerById(managerId);
+
+            bool canAccess = false;
+            manager.VenueIds.ForEach(v =>
+            {
+                if (v.Equals(new ObjectId(venueId)))
+                {
+                    canAccess = true;
+                }
+            });
+
+            return canAccess;
         }
     }
 }

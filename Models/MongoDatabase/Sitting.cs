@@ -5,8 +5,12 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace patrons_web_api.Models.MongoDatabase
 {
-    public abstract class SittingBase
+    public class SittingDocument
     {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; }
+
         [BsonElement("tableNumber")]
         public string TableNumber { get; set; }
 
@@ -15,22 +19,6 @@ namespace patrons_web_api.Models.MongoDatabase
 
         [BsonElement("isActive")]
         public bool IsActive { get; set; }
-
-        [BsonElement("serviceId")]
-        public string ServiceId { get; set; }
-    }
-
-    public class Sitting : SittingBase
-    {
-        [BsonElement("checkIns")]
-        public List<CheckIn> CheckIns { get; set; }
-    }
-
-    public class SittingDocument : SittingBase
-    {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; }
 
         [BsonElement("checkIns")]
         public List<CheckInDocument> CheckIns { get; set; }

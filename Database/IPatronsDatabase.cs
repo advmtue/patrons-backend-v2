@@ -1,26 +1,33 @@
 using System.Threading.Tasks;
+using System.Collections.Generic;
+
 
 using patrons_web_api.Models.MongoDatabase;
-using patrons_web_api.Models.Transfer.Response;
-using patrons_web_api.Models.Transfer.Request;
 
 namespace patrons_web_api.Database
 {
     public interface IPatronsDatabase
     {
-        Task<VenueDocument> getVenueInfo(string venueId);
-        Task<VenueResponse> getPatronVenueView(string venueId, string indexName = "venueId");
+        // Public venue info
+        Task<PublicVenueDocument> GetVenueById(string venueId);
+        Task<PublicVenueDocument> GetVenueByURLName(string urlName);
 
-        Task GamingCheckIn(string venueId, string areaId, GamingCheckInRequest checkIn);
-        Task DiningCheckIn(string venueId, string areaId, DiningCheckInRequest checkIn);
 
-        Task<SittingDocument> FindActiveSittingByServiceAndTable(string serviceId, string tableNumber);
+        // Patron
+        Task SaveGamingCheckIn(string serviceId, GamingPatronDocument patron);
+        Task CreateOrAppendDiningCheckIn(string serviceId, string tableNumber, CheckInDocument checkIn);
 
+
+        // Manager
         Task<ManagerDocument> GetManagerByUsername(string username);
         Task<ManagerDocument> GetManagerById(string managerId);
         Task ManagerUpdatePassword(string managerId, string newPasswordHash);
         Task ManagerDeactivateSessions(string managerId);
+        Task<List<ManagerVenueDocument>> GetManagerVenues(string managerId);
 
+        Task<bool> ManagerCanAccessVenue(string managerId, string venueId);
+
+        // Session
         Task SaveSession(SessionDocument session);
         Task<bool> SessionExists(string sessionId);
         Task<SessionDocument> GetSessionBySessionId(string sessionId);
