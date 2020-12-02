@@ -116,7 +116,19 @@ namespace patrons_web_api.Services
             };
 
             // Save new session
-            await _database.SaveSession(newSession);
+            bool newSessionSaved = false;
+            do
+            {
+                try
+                {
+                    await _database.SaveSession(newSession);
+                    newSessionSaved = true;
+                }
+                catch (SessionExistsException)
+                {
+                    continue;
+                }
+            } while (newSessionSaved == false);
 
             return new ManagerLoginResponse
             {

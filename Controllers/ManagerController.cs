@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 
 using patrons_web_api.Services;
+using patrons_web_api.Database;
+using patrons_web_api.Models.Transfer.Response;
 
 namespace patrons_web_api.Controllers
 {
@@ -85,12 +87,16 @@ namespace patrons_web_api.Controllers
             {
                 return Ok(await _managerService.Login(login, "unknown"));
             }
+            catch (BadLoginException)
+            {
+                // Login credentials are invalid
+                return BadRequest(APIError.BadLogin());
+            }
             catch (Exception e)
             {
-                Console.WriteLine($"[ManagerController] Failed to perform login. [un: {login.Username}]");
-                Console.WriteLine(e.Message);
+                _logger.LogError(e, "Failed to perform login for {username}", login.Username);
 
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
             }
         }
 
@@ -104,11 +110,17 @@ namespace patrons_web_api.Controllers
             {
                 return Ok(await _managerService.GetSelf(managerId));
             }
-            catch (Exception)
+            catch (ManagerNotFoundException e)
             {
-                Console.WriteLine("faile");
+                _logger.LogError(e, "Session managerId resolved to unknown manager. [mId: {managerId}]", managerId);
 
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to pull authenticated manager information. [mId: {managerId}]", managerId);
+
+                return BadRequest(APIError.UnknownError());
             }
         }
 
@@ -116,17 +128,18 @@ namespace patrons_web_api.Controllers
         [Authorize(Policy = "registrationAccess")]
         public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest passwordInfo)
         {
+            string managerId = HttpContext.User.Identity.Name;
+
             try
             {
-                await _managerService.UpdatePassword(HttpContext.User.Identity.Name, passwordInfo.NewPassword);
+                await _managerService.UpdatePassword(managerId, passwordInfo.NewPassword);
                 return Ok();
             }
             catch (Exception e)
             {
-                Console.WriteLine($"[ManagerController] Failed to update manager password [mId: {HttpContext.User.Identity.Name}]");
-                Console.WriteLine(e.Message);
+                _logger.LogError(e, "Failed to update manager password. [mId: {managerId}]", managerId);
 
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
             }
         }
 
@@ -138,13 +151,11 @@ namespace patrons_web_api.Controllers
 
             try
             {
-                var venues = await _managerService.GetVenues(managerId);
-                return Ok(new { Venues = venues });
+                return Ok(new { Venues = await _managerService.GetVenues(managerId) });
             }
             catch (Exception e)
             {
-                Console.WriteLine($"[ManagerController] Failed to get manager venues [mId: {managerId}]");
-                Console.WriteLine(e.Message);
+                _logger.LogError(e, "Failed to retrieve manager venues. [mId: {managerId}]", managerId);
 
                 return BadRequest();
             }
@@ -160,6 +171,22 @@ namespace patrons_web_api.Controllers
             try
             {
                 return Ok(new { Service = await _managerService.StartDiningService(managerId, venueId, areaId) });
+            }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied acess to start dining service. [mId: {managerId}, vId: {venueId}, aId: {areaId}]", managerId, venueId, areaId);
+
+                return BadRequest(APIError.NoAccess());
+            }
+            catch (AreaNotFoundException e)
+            {
+                _logger.LogError(e, "Cannot start dining service in unknown area. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+
+                return BadRequest(APIError.AreaNotFound());
+            }
+            catch (AreaHasActiveServiceException)
+            {
+                return BadRequest(APIError.AreaHasActiveService());
             }
             catch (Exception e)
             {
@@ -181,11 +208,29 @@ namespace patrons_web_api.Controllers
 
                 return Ok();
             }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to stop dining service. [mId: {managerId}, vId: {venueId}, aId: {areaId}]", managerId, venueId, areaId);
+
+                return BadRequest(APIError.NoAccess());
+            }
+            catch (AreaNotFoundException e)
+            {
+                _logger.LogError(e, "Cannot stop dining service in unknown area. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+
+                return BadRequest(APIError.AreaNotFound());
+            }
+            catch (AreaHasNoActiveServiceException e)
+            {
+                _logger.LogError(e, "Cannot stop service in an area that has no active service. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+
+                return BadRequest(APIError.AreaHasNoActiveService());
+            }
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to stop dining service [vId: {venueId}]", venueId);
 
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
             }
         }
 
@@ -198,6 +243,22 @@ namespace patrons_web_api.Controllers
             try
             {
                 return Ok(new { Service = await _managerService.StartGamingService(managerId, venueId, areaId) });
+            }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to start gaming service. [mId: {managerId}, vId: {venueId}, aId: {areaId}]", managerId, venueId, areaId);
+
+                return BadRequest(APIError.NoAccess());
+            }
+            catch (AreaNotFoundException e)
+            {
+                _logger.LogError(e, "Cannot start gaming service in an unknown area. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+
+                return BadRequest(APIError.AreaNotFound());
+            }
+            catch (AreaHasActiveServiceException)
+            {
+                return BadRequest(APIError.AreaHasActiveService());
             }
             catch (Exception e)
             {
@@ -218,6 +279,22 @@ namespace patrons_web_api.Controllers
                 await _managerService.StopGamingService(managerId, venueId, areaId);
 
                 return Ok();
+            }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to stop gaming service. [mId: {managerId}, vId: {venueId}, aId: {areaId}]", managerId, venueId, areaId);
+
+                return BadRequest(APIError.NoAccess());
+            }
+            catch (AreaNotFoundException e)
+            {
+                _logger.LogError(e, "Cannot stop gaming service in unknown area. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+
+                return BadRequest(APIError.AreaNotFound());
+            }
+            catch (AreaHasNoActiveServiceException)
+            {
+                return BadRequest(APIError.AreaHasNoActiveService());
             }
             catch (Exception e)
             {
@@ -243,9 +320,15 @@ namespace patrons_web_api.Controllers
                 await _managerService.DeleteDiningPatron(managerId, serviceId, tableId, checkInId, patronId);
                 return Ok();
             }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to delete gaming patron. [mId: {managerId}, sId: {serviceId}]", managerId, serviceId);
+
+                return BadRequest(APIError.NoAccess());
+            }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to delete patron.");
+                _logger.LogError(e, "Failed to delete patron. [sId: {serviceId}]", serviceId);
 
                 return BadRequest();
             }
@@ -268,6 +351,12 @@ namespace patrons_web_api.Controllers
                 await _managerService.UpdateDiningPatron(managerId, serviceId, tableId, checkInId, patronId, update);
 
                 return Ok();
+            }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to update dining patron. [mId: {managerId}, sId: {serviceId}]", managerId, serviceId);
+
+                return BadRequest(APIError.NoAccess());
             }
             catch (Exception e)
             {
@@ -292,6 +381,12 @@ namespace patrons_web_api.Controllers
             {
                 return Ok(new { TableId = await _managerService.MoveDiningGroup(managerId, serviceId, tableId, checkInId, tableNumber) });
             }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to move dining group. [mId: {managerId}, sId: {serviceId}]", managerId, serviceId);
+
+                return BadRequest(APIError.NoAccess());
+            }
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to move dining check-in");
@@ -314,6 +409,12 @@ namespace patrons_web_api.Controllers
             {
                 return Ok(new { TableId = await _managerService.MoveDiningTable(managerId, serviceId, tableId, tableNumber) });
             }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to move dining table. [mId: {managerId}, sId: {serviceId}]", managerId, serviceId);
+
+                return BadRequest(APIError.NoAccess());
+            }
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to move dining table");
@@ -334,6 +435,12 @@ namespace patrons_web_api.Controllers
 
                 return Ok();
             }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to close dining table. [mId: {managerId}, sId: {serviceId}]", managerId, serviceId);
+
+                return BadRequest(APIError.NoAccess());
+            }
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to close dining table");
@@ -353,6 +460,12 @@ namespace patrons_web_api.Controllers
                 await _managerService.DeleteGamingPatron(managerId, serviceId, patronId);
 
                 return Ok();
+            }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to delete gaming patron. [mId: {managerId}, sId: {serviceId}]", managerId, serviceId);
+
+                return BadRequest(APIError.NoAccess());
             }
             catch (Exception e)
             {
@@ -378,6 +491,12 @@ namespace patrons_web_api.Controllers
 
                 return Ok();
             }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to update gaming patron. [mId: {managerId}, sId: {serviceId}]", managerId, serviceId);
+
+                return BadRequest(APIError.NoAccess());
+            }
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to update gaming patron");
@@ -397,6 +516,12 @@ namespace patrons_web_api.Controllers
                 await _managerService.CheckOutGamingPatron(managerId, serviceId, patronId);
 
                 return Ok();
+            }
+            catch (NoAccessException e)
+            {
+                _logger.LogInformation(e, "Manager was denied access to checkout gaming patron. [mId: {managerId}, sId: {serviceId}]", managerId, serviceId);
+
+                return BadRequest(APIError.NoAccess());
             }
             catch (Exception e)
             {
