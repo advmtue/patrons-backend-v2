@@ -1,12 +1,15 @@
+using System.Threading;
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Threading.Tasks;
 
 using patrons_web_api.Services;
+using patrons_web_api.Models.Transfer.Response;
 
 namespace patrons_web_api.Controllers
 {
@@ -42,11 +45,12 @@ namespace patrons_web_api.Controllers
     public class PatronController : ControllerBase
     {
         private IPatronService _patronService;
+        private readonly ILogger<PatronController> _logger;
 
-        public PatronController(IPatronService patronService)
+        public PatronController(IPatronService patronService, ILogger<PatronController> logger)
         {
-            // Save refs
             _patronService = patronService;
+            _logger = logger;
         }
 
         [AllowAnonymous]
@@ -58,14 +62,15 @@ namespace patrons_web_api.Controllers
             try
             {
                 await _patronService.SubmitGamingCheckIn(venueId, areaId, checkIn);
+                _logger.LogInformation("Gaming check-in. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+
                 return Ok();
             }
             catch (Exception e)
             {
-                Console.WriteLine($"[PatronController] Gaming check-in failed.");
-                Console.WriteLine(e.Message);
+                _logger.LogError(e, "Gaming check-in failed. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
 
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
             }
         }
 
@@ -73,19 +78,19 @@ namespace patrons_web_api.Controllers
         [HttpPost("check-in/{venueId}/dining/{areaId}")]
         public async Task<IActionResult> DiningCheckIn([FromRoute] string venueId, [FromRoute] string areaId, [FromBody] DiningCheckInRequest checkIn)
         {
-            Console.WriteLine($"[PatronController] Dining check-in request. [v: {venueId}, a: {areaId}]");
 
             try
             {
                 await _patronService.SubmitDiningCheckIn(venueId, areaId, checkIn);
+                _logger.LogInformation("Dining check-in. [vId: {venueId}, aId: {areaId}, tN: {tableNumber}, count: {patronCount}", venueId, areaId, checkIn.TableNumber, checkIn.People.Count);
+
                 return Ok();
             }
             catch (Exception e)
             {
-                Console.WriteLine($"[PatronController] Dining check-in failed.");
-                Console.WriteLine(e.Message);
+                _logger.LogError(e, "Dining check-in failed. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
 
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
             }
 
         }
