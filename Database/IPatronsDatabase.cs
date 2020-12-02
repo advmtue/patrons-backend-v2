@@ -11,6 +11,7 @@ namespace patrons_web_api.Database
         // Public venue info
         Task<PublicVenueDocument> GetVenueById(string venueId);
         Task<PublicVenueDocument> GetVenueByURLName(string urlName);
+        Task<PublicVenueDocument> GetVenueByServiceId(string serviceId);
 
 
         // Patron
@@ -24,8 +25,28 @@ namespace patrons_web_api.Database
         Task ManagerUpdatePassword(string managerId, string newPasswordHash);
         Task ManagerDeactivateSessions(string managerId);
         Task<List<ManagerVenueDocument>> GetManagerVenues(string managerId);
-
         Task<bool> ManagerCanAccessVenue(string managerId, string venueId);
+        Task<bool> ManagerCanAccessService(string managerId, string serviceId);
+
+        // Manager -- Service Actions
+        Task<DiningServiceDocument> StartDiningService(string venueId, string areaId);
+        Task<GamingServiceDocument> StartGamingService(string venueId, string areaId);
+        Task StopDiningService(string venueId, string areaId);
+        Task StopGamingService(string venueID, string areaId);
+
+        // Manager -- Dining Actions
+        Task DeleteDiningPatron(string serviceId, string tableId, string checkInId, string patronId);
+        Task UpdateDiningPatron(string serviceId, string tableId, string checkInId, string patronId, DiningPatronDocument patron);
+        Task<string> MoveDiningGroup(string serviceId, string tableId, string checkInId, string newTableNumber);
+        Task<string> MoveDiningTable(string serviceId, string tableId, string newTableNumber);
+        Task CloseDiningTable(string serviceId, string tableId);
+
+        // Manager -- Gaming Actions
+        Task DeleteGamingPatron(string serviceId, string patronId);
+        Task UpdateGamingPatron(string serviceId, string patronId, GamingPatronDocument patron);
+        Task CheckOutGamingPatron(string serviceId, string patronId);
+
+        Task<DiningServiceDocument> GetDiningServiceById(string serviceId);
 
         // Session
         Task SaveSession(SessionDocument session);

@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -22,12 +23,34 @@ namespace patrons_web_api.Services
 
     public interface IManagerService
     {
+        // Manager actions
         Task<ManagerLoginResponse> Login(ManagerLoginRequest loginRequest, string ipAddress);
         Task<List<ManagerVenueDocument>> GetVenues(string managerId);
         Task<ManagerResponse> GetSelf(string managerId);
         Task UpdatePassword(string managerId, string newPassword);
-        Task<string> StartService(string managerId, string venueId, string areaId);
-        Task StopService(string managerId, string venueId, string areaId);
+
+        // Service actions
+        Task<DiningServiceDocument> StartDiningService(string managerId, string venueId, string areaId);
+        Task<GamingServiceDocument> StartGamingService(string managerId, string venueId, string areaId);
+        Task StopDiningService(string managerId, string venueId, string areaId);
+        Task StopGamingService(string managerId, string venueId, string areaId);
+
+        // Patron actions
+        Task DeleteDiningPatron(string managerId, string serviceId, string tableId, string checkInId, string patronId);
+        Task UpdateDiningPatron(string managerId, string serviceId, string tableId, string checkInId, string patronId, DiningPatronUpdateRequest update);
+
+        // Dining group actions
+        Task<string> MoveDiningGroup(string managerId, string serviceId, string tableId, string checkInIdx, string newTableNumber);
+
+        // Dining table actions
+        Task<string> MoveDiningTable(string managerId, string serviceId, string tableId, string newTableNumber);
+        Task CloseDiningTable(string managerId, string serviceId, string tableId);
+
+        // Gaming patron actions
+        Task DeleteGamingPatron(string managerId, string serviceId, string patronId);
+        Task UpdateGamingPatron(string managerId, string serviceId, string patronId, GamingPatronUpdateRequest update);
+        Task CheckOutGamingPatron(string managerId, string serviceId, string patronId);
+
     };
 
     public class ManagerService : IManagerService
@@ -48,6 +71,13 @@ namespace patrons_web_api.Services
             bool managerCanAccess = await _database.ManagerCanAccessVenue(managerId, venueId);
 
             if (!managerCanAccess) throw new NoAccessException();
+        }
+
+        private async Task _EnsureManagerCanAccessService(string managerId, string serviceId)
+        {
+            bool managercanAccess = await _database.ManagerCanAccessService(managerId, serviceId);
+
+            if (!managercanAccess) throw new NoAccessException();
         }
 
         public async Task<ManagerLoginResponse> Login(ManagerLoginRequest loginInfo, string ipAddress)
@@ -129,13 +159,122 @@ namespace patrons_web_api.Services
             return await _database.GetManagerVenues(managerId);
         }
 
-        public async Task<string> StartService(string managerId, string venueId, string areaId)
+        public async Task DeleteDiningPatron(string managerId, string serviceId, string tableId, string checkInId, string patronId)
         {
-            return await Task.FromResult("asdf");
+            // Ensure manager has access to the given venue
+            await _EnsureManagerCanAccessService(managerId, serviceId);
+
+            await _database.DeleteDiningPatron(serviceId, tableId, checkInId, patronId);
         }
 
-        public async Task StopService(string managerId, string venueId, string areaId)
+        public async Task UpdateDiningPatron(string managerId, string serviceId, string tableId, string checkInId, string patronId, DiningPatronUpdateRequest update)
         {
+            await _EnsureManagerCanAccessService(managerId, serviceId);
+
+            DiningServiceDocument diningService = await _database.GetDiningServiceById(serviceId);
+
+            // Check that the service is active
+            if (!diningService.IsActive) throw new ServiceIsNotActiveException();
+
+            // Locate table
+            var table = diningService.Sittings.Find(sitting => sitting.Id.Equals(tableId));
+            if (table == null) throw new TableNotFoundException();
+
+            // Locate checkIn
+            var checkIn = table.CheckIns.Find(ci => ci.Id.Equals(checkInId));
+            if (checkIn == null) throw new CheckInNotFoundExcption();
+
+            // Locate patron
+            var patron = checkIn.People.Find(p => p.Id.Equals(patronId));
+            if (patron == null) throw new PatronNotFoundException();
+
+            // Update patron
+            patron.FirstName = update.FirstName;
+            patron.PhoneNumber = update.PhoneNumber;
+
+            // Save
+            await _database.UpdateDiningPatron(serviceId, tableId, checkInId, patronId, patron);
+        }
+
+        public async Task<string> MoveDiningGroup(string managerId, string serviceId, string tableId, string checkInId, string newTableNumber)
+        {
+            await _EnsureManagerCanAccessService(managerId, serviceId);
+
+            // Ensure the service is active
+            var service = await _database.GetDiningServiceById(serviceId);
+            if (!service.IsActive) throw new ServiceIsNotActiveException();
+
+            return await _database.MoveDiningGroup(serviceId, tableId, checkInId, newTableNumber);
+        }
+
+        public async Task<string> MoveDiningTable(string managerId, string serviceId, string tableId, string newTableNumber)
+        {
+            await _EnsureManagerCanAccessService(managerId, serviceId);
+
+            // Ensure the service is active
+            var service = await _database.GetDiningServiceById(serviceId);
+            if (!service.IsActive) throw new ServiceIsNotActiveException();
+
+            // Move the table
+            return await _database.MoveDiningTable(serviceId, tableId, newTableNumber);
+        }
+
+        public async Task CloseDiningTable(string managerId, string serviceId, string tableId)
+        {
+            await _EnsureManagerCanAccessService(managerId, serviceId);
+
+            // Ensure service is active
+            var service = await _database.GetDiningServiceById(serviceId);
+            if (!service.IsActive) throw new ServiceIsNotActiveException();
+
+            await _database.CloseDiningTable(serviceId, tableId);
+        }
+
+        public Task DeleteGamingPatron(string managerId, string serviceId, string patronId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task UpdateGamingPatron(string managerId, string serviceId, string patronId, GamingPatronUpdateRequest update)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task CheckOutGamingPatron(string managerId, string serviceId, string patronId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<DiningServiceDocument> StartDiningService(string managerId, string venueId, string areaId)
+        {
+            await _EnsureManagerCanAccessVenue(managerId, venueId);
+
+            // Start the dining service and return it
+            return await _database.StartDiningService(venueId, areaId);
+        }
+
+        public async Task<GamingServiceDocument> StartGamingService(string managerId, string venueId, string areaId)
+        {
+            await _EnsureManagerCanAccessVenue(managerId, venueId);
+
+            // Start the gaming service and return it
+            return await _database.StartGamingService(venueId, areaId);
+        }
+
+        public async Task StopDiningService(string managerId, string venueId, string areaId)
+        {
+            await _EnsureManagerCanAccessVenue(managerId, venueId);
+
+            // Stop the dining service
+            await _database.StopDiningService(venueId, areaId);
+        }
+
+        public async Task StopGamingService(string managerId, string venueId, string areaId)
+        {
+            await _EnsureManagerCanAccessVenue(managerId, venueId);
+
+            // Stop the gaming service
+            await _database.StopGamingService(venueId, areaId);
         }
     }
 }
