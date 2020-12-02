@@ -31,7 +31,7 @@ namespace patrons_web_api.Authentication
         {
             if (!Request.Headers.ContainsKey("Authorization"))
             {
-                return AuthenticateResult.Fail("Authorization header not present in request");
+                return AuthenticateResult.NoResult();
             }
 
             string sessionId = Request.Headers["Authorization"].ToString();
