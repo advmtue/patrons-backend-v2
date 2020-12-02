@@ -7,7 +7,7 @@ namespace patrons_web_api.Models.MongoDatabase
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string Id;
+        public string Id { get; set; }
 
         // --- Contact information
         // First name
@@ -24,14 +24,14 @@ namespace patrons_web_api.Models.MongoDatabase
 
         // Time of check-in
         [BsonElement("checkInTime")]
-        public long CheckInTime;
+        public long CheckInTime { get; set; }
 
         // Time of check-out, or -1 if still active
         [BsonElement("checkOutTime")]
-        public long CheckOutTime;
+        public long CheckOutTime { get; set; }
 
         // Is the patron still active in the venue? Determined by Gaming Marshall
         [BsonElement("isActive")]
-        public bool IsActive;
+        public bool IsActive { get; set; }
     }
 }

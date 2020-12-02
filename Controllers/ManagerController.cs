@@ -139,7 +139,8 @@ namespace patrons_web_api.Controllers
 
             try
             {
-                return Ok(new { Venues = await _managerService.GetVenues(managerId) });
+                var venues = await _managerService.GetVenues(managerId);
+                return Ok(new { Venues = venues });
             }
             catch (Exception e)
             {
