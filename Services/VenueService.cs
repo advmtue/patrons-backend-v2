@@ -1,9 +1,6 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using patrons_web_api.Models.MongoDatabase;
 using patrons_web_api.Database;
-
-using patrons_web_api.Models.Transfer.Response;
 
 namespace patrons_web_api.Services
 {

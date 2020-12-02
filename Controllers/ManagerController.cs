@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 
 using patrons_web_api.Services;
-using patrons_web_api.Database;
 
 namespace patrons_web_api.Controllers
 {
