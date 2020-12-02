@@ -6,6 +6,7 @@ using MongoDB.Bson;
 using System.Threading.Tasks;
 
 using patrons_web_api.Models.MongoDatabase;
+using patrons_web_api.Controllers;
 
 namespace patrons_web_api.Database
 {
@@ -305,7 +306,7 @@ namespace patrons_web_api.Database
             return service;
         }
 
-        private async Task<GamingServiceDocument> GetGamingServiceById(string serviceId)
+        public async Task<GamingServiceDocument> GetGamingServiceById(string serviceId)
         {
             var filter = Builders<GamingServiceDocument>.Filter.Eq(gs => gs.Id, serviceId);
             var service = await _gamingServiceCollection.Find(filter).FirstOrDefaultAsync();
@@ -637,19 +638,51 @@ namespace patrons_web_api.Database
             );
         }
 
-        public Task DeleteGamingPatron(string serviceId, string patronId)
+        public async Task DeleteGamingPatron(string serviceId, string patronId)
         {
-            throw new NotImplementedException();
+            // Pull patron from gamingservice.patrons where patron.id = patronId
+            await _gamingServiceCollection.UpdateOneAsync(
+                gs => gs.Id.Equals(serviceId),
+                Builders<GamingServiceDocument>.Update.PullFilter(
+                    gs => gs.Patrons,
+                    p => p.Id.Equals(patronId)
+                )
+            );
         }
 
-        public Task UpdateGamingPatron(string serviceId, string patronId, GamingPatronDocument patron)
+        public async Task UpdateGamingPatron(string serviceId, string patronId, GamingPatronUpdateRequest update)
         {
-            throw new NotImplementedException();
+            var arrayFilters = new List<ArrayFilterDefinition> {
+                new BsonDocumentArrayFilterDefinition<GamingServiceDocument> (
+                    new BsonDocument("patron._id", new ObjectId(patronId))
+                )
+            };
+
+            await _gamingServiceCollection.UpdateOneAsync(
+                gs => gs.Id.Equals(serviceId),
+                Builders<GamingServiceDocument>.Update
+                    .Set("patrons.$[patron].firstName", update.FirstName)
+                    .Set("patrons.$[patron].lastName", update.LastName)
+                    .Set("patrons.$[patron].phoneNumber", update.PhoneNumber),
+                new UpdateOptions { ArrayFilters = arrayFilters }
+            );
         }
 
-        public Task CheckOutGamingPatron(string serviceId, string patronId)
+        public async Task CheckOutGamingPatron(string serviceId, string patronId)
         {
-            throw new NotImplementedException();
+            var arrayFilters = new List<ArrayFilterDefinition> {
+                new BsonDocumentArrayFilterDefinition<GamingServiceDocument>(
+                    new BsonDocument("patron._id", new ObjectId(patronId))
+                )
+            };
+
+            await _gamingServiceCollection.UpdateOneAsync(
+                gs => gs.Id.Equals(serviceId),
+                Builders<GamingServiceDocument>.Update
+                    .Set("patrons.$[patron].isActive", false)
+                    .Set("patrons.$[patron].checkOutTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()),
+                new UpdateOptions { ArrayFilters = arrayFilters }
+            );
         }
 
         public async Task<DiningServiceDocument> StartDiningService(string venueId, string areaId)
@@ -663,7 +696,7 @@ namespace patrons_web_api.Database
             // Ensure area exists
             if (area == null) throw new AreaNotFoundException();
 
-            // Ensure area has an active service
+            // Ensure area has no active service
             if (area.IsOpen) throw new AreaHasActiveServiceException();
 
             // Create a new active dining service
@@ -703,9 +736,55 @@ namespace patrons_web_api.Database
             return newDiningService;
         }
 
-        public Task<GamingServiceDocument> StartGamingService(string venueId, string areaId)
+        public async Task<GamingServiceDocument> StartGamingService(string venueId, string areaId)
         {
-            throw new NotImplementedException();
+            // Pull venue
+            var venue = await this.GetVenueById(venueId);
+
+            // Find area
+            var area = venue.GamingAreas.Find(ga => ga.Id.Equals(areaId));
+
+            // Ensure area exists
+            if (area == null) throw new AreaNotFoundException();
+
+            // Ensure area has no active service
+            if (area.IsOpen) throw new AreaHasActiveServiceException();
+
+            // Create a new active dining service
+            var newGamingService = new GamingServiceDocument
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                OpenedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                IsActive = true,
+                ServiceType = "DINING",
+                AreaId = areaId,
+                VenueId = venueId,
+                Patrons = new List<GamingPatronDocument>()
+            };
+
+            // Save the dining service
+            await _gamingServiceCollection.InsertOneAsync(newGamingService);
+
+            // Update the venue area to reflect that it is open, and has a new activeService
+            await _venueCollection.UpdateOneAsync(
+                v => v.Id.Equals(venueId),
+                Builders<PublicVenueDocument>.Update
+                    .Set("gamingAreas.$[area].isOpen", true)
+                    .Set("gamingAreas.$[area].activeService", newGamingService.Id),
+                new UpdateOptions
+                {
+                    ArrayFilters = new List<ArrayFilterDefinition>{
+                    new BsonDocumentArrayFilterDefinition<PublicVenueDocument>
+                        (
+                            new BsonDocument{
+                                { "area._id", new ObjectId(areaId) }
+                            }
+                        )
+                    }
+                }
+            );
+
+            return newGamingService;
         }
 
         public async Task StopDiningService(string venueId, string areaId)
@@ -755,9 +834,51 @@ namespace patrons_web_api.Database
             );
         }
 
-        public Task StopGamingService(string venueID, string areaId)
+        public async Task StopGamingService(string venueId, string areaId)
         {
-            throw new NotImplementedException();
+            // Pull venue
+            var venue = await this.GetVenueById(venueId);
+
+            // Find area
+            var area = venue.GamingAreas.Find(a => a.Id.Equals(areaId));
+
+            // Ensure area exists
+            if (area == null) throw new AreaNotFoundException();
+
+            // Ensure area has an active service
+            if (!area.IsOpen) throw new AreaHasNoActiveServiceException();
+
+            // Pull the active service
+            var activeService = await this.GetGamingServiceById(area.ActiveService);
+
+            // Confirm the service is not open
+            if (!activeService.IsActive) throw new AreaHasNoActiveServiceException();
+
+            // Create array filters for venue update
+            var arrayFilter = new List<ArrayFilterDefinition>() {
+                new BsonDocumentArrayFilterDefinition<PublicVenueDocument>
+                (
+                    new BsonDocument
+                    {
+                        { "area._id", new ObjectId(areaId) }
+                    }
+                )
+            };
+
+            // Update the venue
+            _venueCollection.UpdateOne(
+                v => v.Id.Equals(venueId),
+                Builders<PublicVenueDocument>.Update.Set("gamingAreas.$[area].isOpen", false),
+                new UpdateOptions { ArrayFilters = arrayFilter }
+            );
+
+            // Update the service
+            _gamingServiceCollection.UpdateOne(
+                ds => ds.Id.Equals(activeService.Id),
+                Builders<GamingServiceDocument>.Update
+                    .Set(ds => ds.IsActive, false)
+                    .Set(ds => ds.ClosedAt, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            );
         }
 
         public async Task<bool> ManagerCanAccessService(string managerId, string serviceId)

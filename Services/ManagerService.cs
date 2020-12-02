@@ -230,19 +230,36 @@ namespace patrons_web_api.Services
             await _database.CloseDiningTable(serviceId, tableId);
         }
 
-        public Task DeleteGamingPatron(string managerId, string serviceId, string patronId)
+        public async Task DeleteGamingPatron(string managerId, string serviceId, string patronId)
         {
-            throw new NotImplementedException();
+            await _EnsureManagerCanAccessService(managerId, serviceId);
+
+            // Ensure the service is active
+            var service = await _database.GetGamingServiceById(serviceId);
+            if (!service.IsActive) throw new ServiceIsNotActiveException();
+
+            await _database.DeleteGamingPatron(serviceId, patronId);
         }
 
-        public Task UpdateGamingPatron(string managerId, string serviceId, string patronId, GamingPatronUpdateRequest update)
+        public async Task UpdateGamingPatron(string managerId, string serviceId, string patronId, GamingPatronUpdateRequest update)
         {
-            throw new NotImplementedException();
+            await _EnsureManagerCanAccessService(managerId, serviceId);
+
+            // Ensure the service is active
+            var service = await _database.GetGamingServiceById(serviceId);
+            if (!service.IsActive) throw new ServiceIsNotActiveException();
+
+            await _database.UpdateGamingPatron(managerId, patronId, update);
         }
 
-        public Task CheckOutGamingPatron(string managerId, string serviceId, string patronId)
+        public async Task CheckOutGamingPatron(string managerId, string serviceId, string patronId)
         {
-            throw new NotImplementedException();
+            await _EnsureManagerCanAccessService(managerId, serviceId);
+
+            var service = await _database.GetGamingServiceById(serviceId);
+            if (!service.IsActive) throw new ServiceIsNotActiveException();
+
+            await _database.CheckOutGamingPatron(serviceId, patronId);
         }
 
         public async Task<DiningServiceDocument> StartDiningService(string managerId, string venueId, string areaId)

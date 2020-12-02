@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
-
+using patrons_web_api.Controllers;
 using patrons_web_api.Models.MongoDatabase;
 
 namespace patrons_web_api.Database
@@ -43,10 +43,11 @@ namespace patrons_web_api.Database
 
         // Manager -- Gaming Actions
         Task DeleteGamingPatron(string serviceId, string patronId);
-        Task UpdateGamingPatron(string serviceId, string patronId, GamingPatronDocument patron);
+        Task UpdateGamingPatron(string serviceId, string patronId, GamingPatronUpdateRequest patron);
         Task CheckOutGamingPatron(string serviceId, string patronId);
 
         Task<DiningServiceDocument> GetDiningServiceById(string serviceId);
+        Task<GamingServiceDocument> GetGamingServiceById(string serviceId);
 
         // Session
         Task SaveSession(SessionDocument session);
