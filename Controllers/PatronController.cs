@@ -57,8 +57,6 @@ namespace patrons_web_api.Controllers
         [HttpPost("check-in/{venueId}/gaming/{areaId}")]
         public async Task<IActionResult> GamingCheckInRequest([FromRoute] string venueId, [FromRoute] string areaId, [FromBody] GamingCheckInRequest checkIn)
         {
-            Console.WriteLine($"[VenueController] Gaming check-in. [v: {venueId}, a: {areaId}]");
-
             try
             {
                 await _patronService.SubmitGamingCheckIn(venueId, areaId, checkIn);
@@ -82,13 +80,13 @@ namespace patrons_web_api.Controllers
             try
             {
                 await _patronService.SubmitDiningCheckIn(venueId, areaId, checkIn);
-                _logger.LogInformation("Dining check-in. [vId: {venueId}, aId: {areaId}, tN: {tableNumber}, count: {patronCount}", venueId, areaId, checkIn.TableNumber, checkIn.People.Count);
+                _logger.LogInformation("Dining check-in. [vId: {venueId}, aId: {areaId}, tN: {tableNumber}, count: {patronCount}]", venueId, areaId, checkIn.TableNumber, checkIn.People.Count);
 
                 return Ok();
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Dining check-in failed. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+                _logger.LogError(e, "Dining check-in failed. [vId: {venueId}, aId: {areaId}, tN: {tableNumber}, count: {patronCount}]", venueId, areaId, checkIn.TableNumber, checkIn.People.Count);
 
                 return BadRequest(APIError.UnknownError());
             }
