@@ -22,7 +22,7 @@ namespace patrons_web_api.Database
         // Manager
         Task<ManagerDocument> GetManagerByUsername(string username);
         Task<ManagerDocument> GetManagerById(string managerId);
-        Task ManagerUpdatePassword(string managerId, string newPasswordHash);
+        Task ManagerUpdatePassword(string managerId, string newPasswordHash, string newSalt);
         Task ManagerDeactivateSessions(string managerId);
         Task<List<ManagerVenueDocument>> GetManagerVenues(string managerId);
         Task<bool> ManagerCanAccessVenue(string managerId, string venueId);

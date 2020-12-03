@@ -267,7 +267,7 @@ namespace patrons_web_api.Database
             return manager;
         }
 
-        public async Task ManagerUpdatePassword(string managerId, string newPassword)
+        public async Task ManagerUpdatePassword(string managerId, string newPassword, string newSalt)
         {
             // Filter to match manager._id with ObjectId(managerId)
             var filter = Builders<ManagerDocument>.Filter.Eq(m => m.Id, managerId);
@@ -275,6 +275,7 @@ namespace patrons_web_api.Database
             // Update to set password to the new value and isPasswordReset = false
             var update = Builders<ManagerDocument>.Update
                 .Set(m => m.Password, newPassword)
+                .Set(m => m.Salt, newSalt)
                 .Set(m => m.IsPasswordReset, false);
 
             // Update manager document

@@ -156,10 +156,10 @@ namespace patrons_web_api.Services
             var manager = await _database.GetManagerById(managerId);
 
             // Create a new password hash using the original manager salt
-            var newPassHash = _password.RegeneratePassword(newPassword, manager.Salt);
+            var newPasswordInfo = _password.CreatePassword(newPassword);
 
             // Save new password
-            await _database.ManagerUpdatePassword(manager.Id, newPassHash.HashedPassword);
+            await _database.ManagerUpdatePassword(manager.Id, newPasswordInfo.HashedPassword, newPasswordInfo.Salt);
 
             // Deactivate all manager sessions
             await _database.ManagerDeactivateSessions(manager.Id);
