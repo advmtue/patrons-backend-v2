@@ -25,6 +25,8 @@ namespace patrons_web_api
 {
     public class Startup
     {
+        private readonly string _corsPatronsOrigins = "_corsPatronsOrigins";
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -37,9 +39,12 @@ namespace patrons_web_api
         {
             services.AddCors(options =>
             {
-                options.AddPolicy("allowAll", builder =>
+                options.AddPolicy(_corsPatronsOrigins, builder =>
                 {
-                    builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                    builder
+                        .WithOrigins("https://patrons.at", "http://localhost:4200")
+                        .AllowAnyMethod()
+                        .AllowAnyHeader();
                 });
             });
 
@@ -86,7 +91,7 @@ namespace patrons_web_api
 
             app.UseRouting();
 
-            app.UseCors("allowAll");
+            app.UseCors(_corsPatronsOrigins);
 
             app.UseAuthentication();
             app.UseAuthorization();
