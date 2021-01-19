@@ -30,6 +30,7 @@ namespace patrons_web_api.Database
     public class CheckInNotFoundExcption : Exception { }
     public class PatronNotFoundException : Exception { }
     public class MatchingTableException : Exception { }
+    public class MarketingUserNotFoundException : Exception { }
 
     public class ManagerVenueAggregation
     {
@@ -60,6 +61,8 @@ namespace patrons_web_api.Database
         public const string Service = "service";
         public const string Manager = "manager";
         public const string Session = "session";
+        public const string MarketingUser = "marketing_user";
+        public const string MarketingUnsubscribe = "marketing_user_unsubscribe";
     }
 
     public class MongoDatabase : IPatronsDatabase
@@ -70,6 +73,8 @@ namespace patrons_web_api.Database
         private IMongoCollection<GamingServiceDocument> _gamingServiceCollection;
         private IMongoCollection<ManagerDocument> _managerCollection;
         private IMongoCollection<SessionDocument> _sessionCollection;
+        private IMongoCollection<MarketingUser> _marketingUserCollection;
+        private IMongoCollection<MarketingUnsubscribe> _marketingUnsubscribeCollection;
 
         public MongoDatabase(IMongoDatabaseSettings settings)
         {
@@ -85,6 +90,10 @@ namespace patrons_web_api.Database
             _serviceCollection = database.GetCollection<BsonDocument>(PatronsCollectionNames.Service);
             _managerCollection = database.GetCollection<ManagerDocument>(PatronsCollectionNames.Manager);
             _sessionCollection = database.GetCollection<SessionDocument>(PatronsCollectionNames.Session);
+
+            // Marketing
+            _marketingUserCollection = database.GetCollection<MarketingUser>(PatronsCollectionNames.MarketingUser);
+            _marketingUnsubscribeCollection = database.GetCollection<MarketingUnsubscribe>(PatronsCollectionNames.MarketingUnsubscribe);
 
             // Dining and gaming services
             _diningServiceCollection = database.GetCollection<DiningServiceDocument>(PatronsCollectionNames.Service);
@@ -899,6 +908,90 @@ namespace patrons_web_api.Database
         public Task<PublicVenueDocument> GetVenueByServiceId(string serviceId)
         {
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Search for a marketing user by a given email address. Filter critera also states
+        /// that the user must be subscribed to marketing emails. If no users are found matching
+        /// the email, throw an error.
+        /// </summary>
+        /// <param name="email">Email address of user</param>
+        /// <returns>A user</returns>
+        public async Task<MarketingUser> GetActiveMarketingUserByEmail(string email)
+        {
+            // Look for a user with matching email and subscribed = true
+            var user = await _marketingUserCollection.Find(
+                Builders<MarketingUser>.Filter.Eq(mu => mu.Email, email) &
+                Builders<MarketingUser>.Filter.Eq(mu => mu.Subscribed, true)
+            ).FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                throw new MarketingUserNotFoundException();
+            }
+
+            return user;
+        }
+
+        /// <summary>
+        /// Change the value of a marketing users' subscription status. Lookup the user
+        /// by their unique Id (bsonid).
+        /// </summary>
+        /// <param name="id">Unique ID of marketing user</param>
+        /// <param name="isSubscribed">Subscription status. True = subscribed</param>
+        public async Task SetMarketingUserSubscription(string id, bool isSubscribed)
+        {
+            await _marketingUserCollection.UpdateOneAsync(
+                Builders<MarketingUser>.Filter.Eq(mu => mu.Id, id),
+                Builders<MarketingUser>.Update.Set(mu => mu.Subscribed, isSubscribed)
+            );
+        }
+
+        /// <summary>
+        /// Create a new marketing user from name and email address. Additional sets the user
+        /// to automatically recieve marketing emails, until they decide to unsubscribe.
+        /// </summary>
+        /// <param name="name">User name</param>
+        /// <param name="email">Email address</param>
+        /// <returns>The new inserted marketing user</returns>
+        public async Task<MarketingUser> CreateMarketingUser(string name, string email)
+        {
+            var mUser = new MarketingUser
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                Name = name,
+                Email = email,
+                Subscribed = true,
+                CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                UnsubscribedAt = -1,
+            };
+
+            // Insert the user
+            await _marketingUserCollection.InsertOneAsync(mUser);
+
+            // Return the newly created user
+            return mUser;
+        }
+
+        /// <summary>
+        /// Create an unsubscribe link for a given marketing user.
+        /// Accessing the link in the browser will result in the user being unsubscribed
+        /// from marketing emails.
+        /// </summary>
+        /// <param name="mUser">Marketing for which to create link</param>
+        /// <returns>Link ID</returns>
+        public async Task<string> CreateMarketingUserUnsubscribeLink(MarketingUser mUser)
+        {
+            var mUnsub = new MarketingUnsubscribe
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                MarketingUserId = mUser.Id,
+                CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            };
+
+            await _marketingUnsubscribeCollection.InsertOneAsync(mUnsub);
+
+            return mUnsub.Id;
         }
     }
 }

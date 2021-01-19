@@ -1,21 +1,9 @@
-using System.Net;
-using System;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore.Authentication;
-
-using System.IO;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Encodings.Web;
 
 using patrons_web_api.Database;
 using patrons_web_api.Authentication;
@@ -63,9 +51,11 @@ namespace patrons_web_api
             // Configs
             services.Configure<MongoDatabaseSettings>(Configuration.GetSection(nameof(MongoDatabaseSettings)));
             services.Configure<SessionSettings>(Configuration.GetSection(nameof(SessionSettings)));
+            services.Configure<RecaptchaV3Settings>(Configuration.GetSection(nameof(RecaptchaV3Settings)));
 
             services.AddSingleton<IMongoDatabaseSettings>(sp => sp.GetRequiredService<IOptions<MongoDatabaseSettings>>().Value);
             services.AddSingleton<ISessionSettings>(sp => sp.GetRequiredService<IOptions<SessionSettings>>().Value);
+            services.AddSingleton<IRecaptchaV3Settings>(sp => sp.GetRequiredService<IOptions<RecaptchaV3Settings>>().Value);
 
             // Register injectables for IoC injector
             services.AddSingleton<IPatronsDatabase, MongoDatabase>();
@@ -74,6 +64,9 @@ namespace patrons_web_api
             services.AddSingleton<IPatronService, PatronService>();
             services.AddSingleton<PasswordService>();
             services.AddSingleton<ISessionService, SessionService>();
+            services.AddSingleton<IRecaptchaService, RecaptchaService>();
+            services.AddSingleton<INewsletterService, NewsletterService>();
+            services.AddSingleton<IEmailService, EmailService>();
 
             // Register API controllers
             services.AddControllers();

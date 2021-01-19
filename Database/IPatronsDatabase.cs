@@ -53,5 +53,11 @@ namespace patrons_web_api.Database
         Task SaveSession(SessionDocument session);
         Task<bool> SessionExists(string sessionId);
         Task<SessionDocument> GetSessionBySessionId(string sessionId);
+
+        // Marketing users
+        Task<MarketingUser> GetActiveMarketingUserByEmail(string email);
+        Task SetMarketingUserSubscription(string id, bool isSubscribed);
+        Task<MarketingUser> CreateMarketingUser(string name, string email);
+        Task<string> CreateMarketingUserUnsubscribeLink(MarketingUser mUser);
     }
 }

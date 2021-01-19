@@ -51,6 +51,11 @@ namespace patrons_web_api.Models.Transfer.Response
             return new APIError("Area does not have an active service", EAreaHasNoActiveService);
         }
 
+        public static APIError MarketingUserAlreadySubscribed()
+        {
+            return new APIError("A matching email address is already subscribed for marketing", EMarketingUserAlreadySubscribed);
+        }
+
         // Error code string constants
         const string EAreaHasNoActiveService = "E_AREA_HAS_NO_ACTIVE_SERVICE";
         const string EAreaHasActiveService = "E_AREA_HAS_ACTIVE_SERVICE";
@@ -60,5 +65,6 @@ namespace patrons_web_api.Models.Transfer.Response
         const string EBadLogin = "E_BAD_LOGIN";
         const string ENoAccess = "E_NO_ACCESS";
         const string EAreaNotFound = "E_AREA_NOT_FOUND";
+        const string EMarketingUserAlreadySubscribed = "E_MARKETING_USER_SUBSCRIBED";
     }
 }
