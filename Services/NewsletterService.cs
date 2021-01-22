@@ -11,6 +11,7 @@ namespace patrons_web_api.Services
     public interface INewsletterService
     {
         Task<MarketingUser> RegisterUser(string name, string email);
+        Task UnsubscribeFromMarketing(string unsubscribeId);
     }
 
     public class NewsletterService : INewsletterService
@@ -49,6 +50,16 @@ namespace patrons_web_api.Services
             }
 
             return mu;
+        }
+
+        /// <summary>
+        /// Unsubscribe a user from marketing emails using an unsubscribe link.
+        /// </summary>
+        /// <param name="unsubscribeId">Unsubscribe link ID</param>
+        /// <returns></returns>
+        public async Task UnsubscribeFromMarketing(string unsubscribeId)
+        {
+            await _database.UnsubscribeFromMarketing(unsubscribeId);
         }
     }
 }

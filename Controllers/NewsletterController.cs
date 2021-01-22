@@ -103,10 +103,27 @@ namespace patrons_web_api.Controllers
                 return BadRequest();
             }
 
-            // Send update email to sales@patrons.at (feeback loop boy)
+            // TODO Send update email to sales@patrons.at (feeback loop boy)
 
-            // Finish request
-            return await Task.FromResult(Ok());
+            return Ok();
+        }
+
+        [AllowAnonymous]
+        [HttpDelete("unsubscribe/{unsubscribeId}")]
+        public async Task<IActionResult> UnsubscribeFromMarketing([FromRoute] string unsubscribeId)
+        {
+            try
+            {
+                await _newsletter.UnsubscribeFromMarketing(unsubscribeId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to unsubscribe user from marketing emails.");
+
+                return BadRequest(APIError.UnknownError());
+            }
+
+            return Ok();
         }
     }
 }

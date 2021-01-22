@@ -15,5 +15,11 @@ namespace patrons_web_api.Models.MongoDatabase
 
         [BsonElement("createdAt")]
         public long CreatedAt { get; set; }
+
+        [BsonElement("isUsed")]
+        public bool IsUsed { get; set; }
+
+        [BsonElement("usedAt")]
+        public long UsedAt { get; set; }
     }
 }

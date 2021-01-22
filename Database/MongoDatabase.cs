@@ -1,3 +1,4 @@
+using System.Threading;
 using System;
 using System.Collections.Generic;
 using MongoDB.Driver;
@@ -31,6 +32,8 @@ namespace patrons_web_api.Database
     public class PatronNotFoundException : Exception { }
     public class MatchingTableException : Exception { }
     public class MarketingUserNotFoundException : Exception { }
+    public class MarketingUnsubscribeNotFound : Exception { }
+    public class MarketingUnsubscribeAlreadyUsed : Exception { }
 
     public class ManagerVenueAggregation
     {
@@ -67,6 +70,7 @@ namespace patrons_web_api.Database
 
     public class MongoDatabase : IPatronsDatabase
     {
+        private IMongoClient _client;
         private IMongoCollection<PublicVenueDocument> _venueCollection;
         private IMongoCollection<BsonDocument> _serviceCollection;
         private IMongoCollection<DiningServiceDocument> _diningServiceCollection;
@@ -79,11 +83,11 @@ namespace patrons_web_api.Database
         public MongoDatabase(IMongoDatabaseSettings settings)
         {
             // Create client connection
-            var client = new MongoClient(
+            _client = new MongoClient(
                 $"mongodb://{settings.Username}:{settings.Password}@{settings.Host}/{settings.AuthDatabase}"
             );
 
-            var database = client.GetDatabase(settings.UseDatabase);
+            var database = _client.GetDatabase(settings.UseDatabase);
 
             // Create collection refs
             _venueCollection = database.GetCollection<PublicVenueDocument>(PatronsCollectionNames.Venue);
@@ -987,11 +991,63 @@ namespace patrons_web_api.Database
                 Id = ObjectId.GenerateNewId().ToString(),
                 MarketingUserId = mUser.Id,
                 CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                IsUsed = false,
+                UsedAt = -1,
             };
 
             await _marketingUnsubscribeCollection.InsertOneAsync(mUnsub);
 
             return mUnsub.Id;
+        }
+
+        public async Task UnsubscribeFromMarketing(string unsubscribeId)
+        {
+            // Start a session for this transaction
+            using (var session = _client.StartSession())
+            {
+                await session.WithTransactionAsync(
+                    async (s, ct) =>
+                    {
+                        // Lookup the unsubscription link
+                        var mUnsub = await _marketingUnsubscribeCollection.Find(m => m.Id == unsubscribeId).FirstOrDefaultAsync();
+
+                        // If no marketing link exists with the given id, throw an error
+                        if (mUnsub == null)
+                        {
+                            throw new MarketingUnsubscribeNotFound();
+                        }
+
+                        // If the marketing link has already been used
+                        if (mUnsub.IsUsed)
+                        {
+                            throw new MarketingUnsubscribeAlreadyUsed();
+                        }
+
+                        // Update the user
+                        await _marketingUserCollection.UpdateOneAsync(
+                            s,
+                            Builders<MarketingUser>.Filter.Eq(m => m.Id, mUnsub.MarketingUserId),
+                            Builders<MarketingUser>.Update
+                                .Set(m => m.Subscribed, false)
+                                .Set(m => m.UnsubscribedAt, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()),
+                            cancellationToken: ct
+                        );
+
+                        // Update the marketing subscription
+                        await _marketingUnsubscribeCollection.UpdateOneAsync(
+                            s,
+                            Builders<MarketingUnsubscribe>.Filter.Eq(m => m.Id, unsubscribeId),
+                            Builders<MarketingUnsubscribe>.Update
+                                .Set(m => m.IsUsed, true)
+                                .Set(m => m.UsedAt, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()),
+                            cancellationToken: ct
+                        );
+
+                        // Return any value else the compiler complains
+                        return "Complete";
+                    }
+                );
+            }
         }
     }
 }

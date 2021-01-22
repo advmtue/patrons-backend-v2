@@ -59,5 +59,6 @@ namespace patrons_web_api.Database
         Task SetMarketingUserSubscription(string id, bool isSubscribed);
         Task<MarketingUser> CreateMarketingUser(string name, string email);
         Task<string> CreateMarketingUserUnsubscribeLink(MarketingUser mUser);
+        Task UnsubscribeFromMarketing(string unsubscribeId);
     }
 }
