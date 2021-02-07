@@ -1,10 +1,27 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace patrons_web_api.Models.MongoDatabase
 {
+
+    public class CallsToAction
+    {
+        [BsonElement("fb")]
+        [JsonPropertyName("facebook")]
+        public string Facebook { get; set; }
+
+        [BsonElement("instagram")]
+        [JsonPropertyName("instagram")]
+        public string Instagram { get; set; }
+
+        [BsonElement("tripadvisor")]
+        [JsonPropertyName("tripadvisor")]
+        public string TripAdvisor { get; set; }
+    }
+
     public abstract class VenueBase
     {
         [BsonId]
@@ -29,6 +46,9 @@ namespace patrons_web_api.Models.MongoDatabase
         [BsonRepresentation(BsonType.ObjectId)]
         [BsonElement("defaultAreaId")]
         public string DefaultAreaId { get; set; }
+
+        [BsonElement("callsToAction")]
+        public CallsToAction CallsToAction { get; set; }
     }
 
     public class PublicVenueDocument : VenueBase
