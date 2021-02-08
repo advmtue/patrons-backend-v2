@@ -12,14 +12,28 @@ using patrons_web_api.Database;
 
 namespace patrons_web_api.Services
 {
+    /// <summary>
+    /// Templating information for sending a marketing welcome email to new users.
+    /// </summary>
     public class MarketingWelcomeEmail
     {
+        /// <summary>
+        /// User name.
+        /// </summary>
         [JsonPropertyName("name")]
         public string User { get; set; }
 
+        /// <summary>
+        /// User email address.
+        /// </summary>
+        /// <value></value>
         [JsonPropertyName("email")]
         public string Email { get; set; }
 
+        /// <summary>
+        /// Unsubscribe link.
+        /// </summary>
+        /// <value></value>
         [JsonPropertyName("unsubscribe_link")]
         public string UnsubscribeLink { get; set; }
     }
@@ -29,6 +43,9 @@ namespace patrons_web_api.Services
         Task SendMarketWelcome(MarketingUser mUser);
     }
 
+    /// <summary>
+    /// Service to handle sending marketing emails and unsubscriptions.
+    /// </summary>
     public class EmailService : IEmailService
     {
         private readonly ILogger<EmailService> _logger;
@@ -44,8 +61,14 @@ namespace patrons_web_api.Services
             _emailClient = new AmazonSimpleEmailServiceClient(RegionEndpoint.APSoutheast2);
         }
 
+        /// <summary>
+        /// Send a marketing welcome email to a user who has signed up to recieve marketing emails.
+        /// </summary>
+        /// <param name="mUser">Marketing user information</param>
+        /// <returns>None.</returns>
         public async Task SendMarketWelcome(MarketingUser mUser)
         {
+            // Create information for a new marketing email
             var data = new MarketingWelcomeEmail
             {
                 User = mUser.Name,
@@ -53,13 +76,13 @@ namespace patrons_web_api.Services
                 UnsubscribeLink = string.Format("https://patrons.at/email/unsubscribe/{0}", await _database.CreateMarketingUserUnsubscribeLink(mUser))
             };
 
-            // Convert data to a JSON string
+            // Convert data to a JSON string.
             string jsonData = JsonSerializer.Serialize<MarketingWelcomeEmail>(data);
 
             // Required template information:
-            // name :: user name
-            // email :: email address
-            // unsubscribe_link :: unsubscribe link
+            //  * name: user name
+            //  * email: email address
+            //  * unsubscribe_link: unsubscribe link
             var emailRequest = new SendTemplatedEmailRequest()
             {
                 Source = "info@patrons.at",
@@ -71,6 +94,7 @@ namespace patrons_web_api.Services
                 TemplateData = jsonData,
             };
 
+            // Send the email.
             await _emailClient.SendTemplatedEmailAsync(emailRequest);
         }
     }
