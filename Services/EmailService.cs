@@ -44,7 +44,7 @@ namespace patrons_web_api.Services
     }
 
     /// <summary>
-    /// Service to handle sending marketing emails and unsubscriptions.
+    /// Service to handle sending marketing emails using templates.
     /// </summary>
     public class EmailService : IEmailService
     {
