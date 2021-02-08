@@ -26,12 +26,12 @@ namespace patrons_web_api.Services
         }
 
         /// <summary>
-        /// Register a user, email combination for recieving marketing emails. Intelligently
+        /// Register a user + email combination for recieving marketing emails. Intelligently
         /// select whether to create new users or update existing user information.
         /// </summary>
-        /// <param name="name"></param>
-        /// <param name="email"></param>
-        /// <returns></returns>
+        /// <param name="name">User's name</param>
+        /// <param name="email">User's email address</param>
+        /// <returns>Marketing user as saved in the database.</returns>
         public async Task<MarketingUser> RegisterUser(string name, string email)
         {
             MarketingUser mu;
@@ -49,6 +49,7 @@ namespace patrons_web_api.Services
                 mu = await _database.CreateMarketingUser(name, email);
             }
 
+            // Return the new marketing user.
             return mu;
         }
 
@@ -59,6 +60,7 @@ namespace patrons_web_api.Services
         /// <returns></returns>
         public async Task UnsubscribeFromMarketing(string unsubscribeId)
         {
+            // Unsubscribe the user.
             await _database.UnsubscribeFromMarketing(unsubscribeId);
         }
     }
