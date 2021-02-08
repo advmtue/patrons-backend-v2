@@ -6,6 +6,8 @@ using patrons_web_api.Models.MongoDatabase;
 
 namespace patrons_web_api.Database
 {
+    // TODO Split the database either into partials of the class or more modular component architecture
+    // At the moment this is a monolith and I do not like it.
     public interface IPatronsDatabase
     {
         // Public venue info

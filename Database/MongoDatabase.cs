@@ -35,17 +35,43 @@ namespace patrons_web_api.Database
     public class MarketingUnsubscribeNotFound : Exception { }
     public class MarketingUnsubscribeAlreadyUsed : Exception { }
 
+    /// <summary>
+    /// Output of aggregation pipeline for manager venue.
+    /// </summary>
     public class ManagerVenueAggregation
     {
         public List<PublicVenueDocument> venues { get; set; }
     }
 
+    /// <summary>
+    /// Mongo database connection settings
+    /// </summary>
     public class MongoDatabaseSettings : IMongoDatabaseSettings
     {
+        /// <summary>
+        /// Hostname.
+        /// </summary>
         public string Host { get; set; }
+
+        /// <summary>
+        /// Auth username.
+        /// </summary>
         public string Username { get; set; }
+
+        /// <summary>
+        /// Auth password.
+        /// </summary>
         public string Password { get; set; }
+
+        /// <summary>
+        /// Authentication Database.
+        /// </summary>
         public string AuthDatabase { get; set; }
+
+        /// <summary>
+        /// Business database.
+        /// </summary>
+        /// <value></value>
         public string UseDatabase { get; set; }
     }
 
@@ -58,6 +84,9 @@ namespace patrons_web_api.Database
         string UseDatabase { get; set; }
     }
 
+    /// <summary>
+    /// Const collection names.
+    /// </summary>
     public class PatronsCollectionNames
     {
         public const string Venue = "venue";
@@ -82,20 +111,21 @@ namespace patrons_web_api.Database
 
         public MongoDatabase(IMongoDatabaseSettings settings)
         {
-            // Create client connection
+            // Create a new mongo database connection.
             _client = new MongoClient(
                 $"mongodb://{settings.Username}:{settings.Password}@{settings.Host}/{settings.AuthDatabase}"
             );
 
+            // Use the patron's database.
             var database = _client.GetDatabase(settings.UseDatabase);
 
-            // Create collection refs
+            // Collection references for venue, service, manager, session.
             _venueCollection = database.GetCollection<PublicVenueDocument>(PatronsCollectionNames.Venue);
             _serviceCollection = database.GetCollection<BsonDocument>(PatronsCollectionNames.Service);
             _managerCollection = database.GetCollection<ManagerDocument>(PatronsCollectionNames.Manager);
             _sessionCollection = database.GetCollection<SessionDocument>(PatronsCollectionNames.Session);
 
-            // Marketing
+            // Collection references for marketing users and unsubscriptions
             _marketingUserCollection = database.GetCollection<MarketingUser>(PatronsCollectionNames.MarketingUser);
             _marketingUnsubscribeCollection = database.GetCollection<MarketingUnsubscribe>(PatronsCollectionNames.MarketingUnsubscribe);
 
@@ -107,38 +137,40 @@ namespace patrons_web_api.Database
         /// <summary>
         /// Lookup a venue by unique Id (venue._id)
         /// </summary>
-        /// <param name="venueId">Venue ObjectId as string</param>
+        /// <param name="venueId">Venue Bson ID</param>
         /// <returns>Public venue information</returns>
         public async Task<PublicVenueDocument> GetVenueById(string venueId)
         {
-            var filter = Builders<PublicVenueDocument>.Filter.Eq("_id", new ObjectId(venueId));
+            // Create a filter to match venue.id to venueId.
+            var filter = Builders<PublicVenueDocument>.Filter.Eq(v => v.Id, venueId);
 
+            // Search for a matching venue asynchronously.
             var venue = await _venueCollection.Find(filter).FirstOrDefaultAsync();
 
-            if (venue == null)
-            {
-                throw new VenueNotFoundException();
-            }
+            // Throw an exception if no matching venue was found.
+            if (venue == null) throw new VenueNotFoundException();
 
+            // Return the public venue information.
             return venue;
         }
 
         /// <summary>
         /// Lookup a venue by unique url string (venue.venueId)
         /// </summary>
-        /// <param name="urlName">Venue.venueId</param>
+        /// <param name="urlName">Venue URL name</param>
         /// <returns>Public venue information</returns>
         public async Task<PublicVenueDocument> GetVenueByURLName(string urlName)
         {
+            // Create a filter to match venue.venueId to urlName.
             var filter = Builders<PublicVenueDocument>.Filter.Eq(v => v.VenueId, urlName);
 
+            // Search for a matching venue.
             var venue = await _venueCollection.Find(filter).FirstOrDefaultAsync();
 
-            if (venue == null)
-            {
-                throw new VenueNotFoundException();
-            }
+            // Throw an exception if no matching venue was found.
+            if (venue == null) throw new VenueNotFoundException();
 
+            // Return the public venue information.
             return venue;
         }
 
@@ -150,9 +182,13 @@ namespace patrons_web_api.Database
         /// <returns></returns>
         public async Task SaveGamingCheckIn(string serviceId, GamingPatronDocument patron)
         {
+            // Build a filter to match the gaming service ID to serviceID.
             var filter = Builders<GamingServiceDocument>.Filter.Eq(gs => gs.Id, serviceId);
+
+            // Build an upate to push a new patron to the service.
             var update = Builders<GamingServiceDocument>.Update.Push(gs => gs.Patrons, patron);
 
+            // Attempt to perform the update.
             await _gamingServiceCollection.UpdateOneAsync(filter, update);
         }
 
@@ -162,17 +198,16 @@ namespace patrons_web_api.Database
         /// <param name="serviceId">Service unique ID as string</param>
         /// <param name="tableNumber">Table number</param>
         /// <param name="checkIn">New check-in</param>
-        /// <returns></returns>
         public async Task CreateOrAppendDiningCheckIn(string serviceId, string tableNumber, CheckInDocument checkIn)
         {
-            // Create a filter for matching service
+            // Build a filter to match the diningService.id to serviceId, and ensure it is the active service.
             var serviceFilter = Builders<DiningServiceDocument>.Filter.Eq(ds => ds.Id, serviceId)
                 & Builders<DiningServiceDocument>.Filter.Eq(ds => ds.IsActive, true);
 
-            // Create a $push update
+            // Build an update to push the new checkIn to the table.
             var checkInsPushUpdate = Builders<DiningServiceDocument>.Update.Push("sittings.$[table].checkIns", checkIn);
 
-            // Build array filters to match table with number and active status
+            // Build array filters to match table with number and active status.
             var arrayFilters = new List<ArrayFilterDefinition>
             {
                 new BsonDocumentArrayFilterDefinition<DiningServiceDocument>(
@@ -182,34 +217,34 @@ namespace patrons_web_api.Database
                     }
                 )
             };
+
+            // Create update options using the array filters.
             var updateOptions = new UpdateOptions { ArrayFilters = arrayFilters };
 
-            // Attempt to perform the push
+            // Attempt to push the checkIns to the dining service.
             var updateResult = await _diningServiceCollection.UpdateOneAsync(serviceFilter, checkInsPushUpdate, updateOptions);
 
-            // Service with matching ID does not exist
-            if (updateResult.MatchedCount == 0)
-            {
-                throw new ServiceNotFoundException();
-            }
+            // Throw an error if update failed since there was no matching service.
+            if (updateResult.MatchedCount == 0) throw new ServiceNotFoundException();
 
-            // If a service was updated nothing else needs to be done
+            // If a service was updated nothing else needs to be done.
             if (updateResult.ModifiedCount == 1) return;
 
-            // No service was update, so assume we need to create a new sitting
+            // No service was updated, so assume we need to create a new sitting.
             var newSitting = new SittingDocument
             {
                 Id = ObjectId.GenerateNewId().ToString(),
                 TableNumber = tableNumber,
                 CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 IsActive = true,
+                // Check-ins is this singular checkIn since we are creating a new sitting
                 CheckIns = new List<CheckInDocument> { checkIn }
             };
 
-            // Create a $push update for sittings
+            // Create a push update for the sitting into the dining services.
             var sittingsPushUpdate = Builders<DiningServiceDocument>.Update.Push(ds => ds.Sittings, newSitting);
 
-            // Push the sitting to the service
+            // Perform the push of the sitting into the service.
             await _diningServiceCollection.UpdateOneAsync(serviceFilter, sittingsPushUpdate);
         }
 
@@ -223,78 +258,112 @@ namespace patrons_web_api.Database
         /// </exception>
         public async Task<ManagerDocument> GetManagerByUsername(string username)
         {
+            // Lookup manager information.
             var manager = await _managerCollection.Find(m => m.Username == username).FirstOrDefaultAsync();
 
-            if (manager == null)
-            {
-                throw new ManagerNotFoundException();
-            }
+            // Throw an exception if the manager does not exist.
+            if (manager == null) throw new ManagerNotFoundException();
 
+            // Return the manager information.
             return manager;
         }
 
+        /// <summary>
+        /// Save a new session to the sessions collection.
+        /// </summary>
+        /// <param name="session">Session document information</param>
         public async Task SaveSession(SessionDocument session)
         {
-            // Ensure the session doesn't already exist
-            // If the sessionID was generated using the correct means, this should never occur
+            // Throw an exception if the session already exists.
             if (await this.SessionExists(session.SessionId))
             {
                 throw new SessionExistsException();
             }
 
+            // Save the session.
             _sessionCollection.InsertOne(session);
         }
 
+        /// <summary>
+        /// Check if a session already exists with teh same sessionId.
+        /// </summary>
+        /// <param name="sessionId">Session ID</param>
+        /// <returns>True if a matching session exists.</returns>
         public async Task<bool> SessionExists(string sessionId)
         {
+            // Lookup the session.
+            // Intentionally don't use this.GetSessionBySessionId since it throws a SessionNountFoundException.
             var session = await _sessionCollection.Find(s => s.SessionId == sessionId).FirstOrDefaultAsync();
 
             return session != null;
         }
 
+        /// <summary>
+        /// Lookup a session by its session ID
+        /// </summary>
+        /// <param name="sessionId"></param>
+        /// <returns></returns>
         public async Task<SessionDocument> GetSessionBySessionId(string sessionId)
         {
+            // Build a filter to match session.sessionId to sessionId.
             var filter = Builders<SessionDocument>.Filter.Eq(s => s.SessionId, sessionId);
 
+            // FIXME Put simple filter in the .Find to make more concise.
             var session = await _sessionCollection.Find(filter).FirstOrDefaultAsync();
 
-            if (session == null)
-            {
-                throw new SessionNotFoundException();
-            }
+            // Throw an exception if the session does not exist.
+            if (session == null) throw new SessionNotFoundException();
 
+            // Return the session.
             return session;
         }
 
+        /// <summary>
+        /// Lookup a manager by their manager ID.
+        /// </summary>
+        /// <param name="managerId">Manager ID</param>
+        /// <returns>Matching manager.</returns>
         public async Task<ManagerDocument> GetManagerById(string managerId)
         {
+            // FIXME Make this much nicer
+            // Find a manager whose ID matches supplied managerId.
             var manager = await _managerCollection.Find(
                 Builders<ManagerDocument>.Filter.Eq(m => m.Id, managerId)
             ).FirstAsync();
 
-            if (manager == null)
-            {
-                throw new ManagerNotFoundException();
-            }
+            // Throw an exception if no manager is found.
+            if (manager == null) throw new ManagerNotFoundException();
 
+            // Return the manager.
             return manager;
         }
 
+        /// <summary>
+        /// Update a manager's password to a new password and salt combination.
+        /// </summary>
+        /// <param name="managerId">Target manager's ID.</param>
+        /// <param name="newPassword">New password string</param>
+        /// <param name="newSalt">Salt string</param>
         public async Task ManagerUpdatePassword(string managerId, string newPassword, string newSalt)
         {
-            // Filter to match manager._id with ObjectId(managerId)
+            // Build a filter to match the manager ID with supplied managerId.
             var filter = Builders<ManagerDocument>.Filter.Eq(m => m.Id, managerId);
 
-            // Update to set password to the new value and isPasswordReset = false
+            // Build an update to assign new password, salt, and isPasswordReset = false.
             var update = Builders<ManagerDocument>.Update
                 .Set(m => m.Password, newPassword)
                 .Set(m => m.Salt, newSalt)
                 .Set(m => m.IsPasswordReset, false);
 
-            // Update manager document
+            // Update manager document.
             await _managerCollection.UpdateOneAsync(filter, update);
         }
 
+        /// <summary>
+        /// Deactivate all sessions for a manager specified by ID.
+        /// </summary>
+        /// <param name="managerId"></param>
+        /// <returns></returns>
         public async Task ManagerDeactivateSessions(string managerId)
         {
             // Filter to match session.managerId with ObjectId(managerId)
