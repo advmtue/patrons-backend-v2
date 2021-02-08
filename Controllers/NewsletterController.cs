@@ -80,7 +80,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception ex)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(ex, "An unknown exception occurred");
 
                 return BadRequest(APIError.UnknownError());
@@ -108,7 +108,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception ex)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(ex, "Exception occurred when attempting to register a marketing user.");
 
                 return BadRequest(APIError.UnknownError());
@@ -121,7 +121,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception ex)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(ex, "An unknown error occurred when attempting to send marketing-welcome email.");
 
                 return BadRequest(APIError.UnknownError());
@@ -151,7 +151,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception ex)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogWarning(ex, "Failed to unsubscribe user from marketing emails due to unknown error.");
 
                 return BadRequest(APIError.UnknownError());

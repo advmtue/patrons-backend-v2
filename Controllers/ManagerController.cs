@@ -163,7 +163,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: Some sort of internal error occurred. Log it and return it.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to perform login for {username}", login.Username);
 
                 return BadRequest(APIError.UnknownError());
@@ -197,7 +197,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: An unknown error occurred. Log the error and return an unknown error.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to pull authenticated manager information. [mId: {managerId}]", managerId);
 
                 return BadRequest(APIError.UnknownError());
@@ -226,7 +226,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: An unknown internal error occurred. Log the error and return an unknown error.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to update manager password. [mId: {managerId}]", managerId);
 
                 return BadRequest(APIError.UnknownError());
@@ -252,7 +252,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: An unknown error occurred. Log the error and return a bad request.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to retrieve manager venues. [mId: {managerId}]", managerId);
 
                 // TODO Return a specific APIError.
@@ -299,7 +299,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: An unknown error. Log the error and return an API error.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to start dining service [vId: {venueId}]", venueId);
 
                 // TODO Return a more specific error
@@ -351,6 +351,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to stop dining service [vId: {venueId}]", venueId);
 
                 return BadRequest(APIError.UnknownError());
@@ -396,7 +397,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: An unknown error occurred. Log the error and return an API error.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to start gaming service [vId: {venueId}]", venueId);
 
                 return BadRequest(APIError.UnknownError());
@@ -447,7 +448,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: An unknown error occurred. Log the error and return an api error.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to stop gaming service [vId: {venueId}]", venueId);
 
                 return BadRequest(APIError.UnknownError());
@@ -492,7 +493,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: An unknown error occurred. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to delete patron. [sId: {serviceId}]", serviceId);
 
                 return BadRequest(APIError.UnknownError());
@@ -539,7 +540,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: An unknown error occurred. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to update dining patron");
 
                 return BadRequest(APIError.UnknownError());
@@ -581,7 +582,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: An unknown error occurred. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to move dining check-in");
 
                 return BadRequest(APIError.UnknownError());
@@ -621,7 +622,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to move dining table");
 
                 return BadRequest(APIError.UnknownError());
@@ -659,7 +660,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to close dining table");
 
                 return BadRequest(APIError.UnknownError());
@@ -697,7 +698,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to delete gaming patron");
 
                 return BadRequest(APIError.UnknownError());
@@ -740,7 +741,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to update gaming patron");
 
                 return BadRequest(APIError.UnknownError());
@@ -778,7 +779,7 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception e)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Failed to checkout gaming patron");
 
                 return BadRequest(APIError.UnknownError());

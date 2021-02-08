@@ -125,7 +125,7 @@ namespace patrons_web_api.Controllers
             // TODO Various not found exceptions.
             catch (Exception e)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Gaming check-in failed. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
 
                 return BadRequest(APIError.UnknownError());
@@ -157,7 +157,7 @@ namespace patrons_web_api.Controllers
             // TODO Various not found exceptions
             catch (Exception e)
             {
-                // Error: Unknown error. Log the error and return.
+                // Error: Unknown error.
                 _logger.LogError(e, "Dining check-in failed. [vId: {venueId}, aId: {areaId}, tN: {tableNumber}, count: {patronCount}]", venueId, areaId, checkIn.TableNumber, checkIn.People.Count);
 
                 return BadRequest(APIError.UnknownError());
