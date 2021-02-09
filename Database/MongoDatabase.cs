@@ -362,67 +362,87 @@ namespace patrons_web_api.Database
         /// <summary>
         /// Deactivate all sessions for a manager specified by ID.
         /// </summary>
-        /// <param name="managerId"></param>
-        /// <returns></returns>
+        /// <param name="managerId">Target manager ID</param>
         public async Task ManagerDeactivateSessions(string managerId)
         {
-            // Filter to match session.managerId with ObjectId(managerId)
+            // Build a filter to match session.managerId with supplied managerId.
             var filter = Builders<SessionDocument>.Filter.Eq(s => s.ManagerId, managerId);
 
-            // Update to disable the session
+            // Build an update to disable the session.
             var update = Builders<SessionDocument>.Update.Set(s => s.IsActive, false);
 
+            // Update all matching documents.
             await _sessionCollection.UpdateManyAsync(filter, update);
         }
 
+        /// <summary>
+        /// Lookup a dining service by ID.
+        /// </summary>
+        /// <param name="serviceId">Target service ID</param>
+        /// <returns>The dining service.</returns>
         public async Task<DiningServiceDocument> GetDiningServiceById(string serviceId)
         {
+            // Build a filter to match dining service ID to specified serviceId.
             var filter = Builders<DiningServiceDocument>.Filter.Eq(ds => ds.Id, serviceId);
+
+            // FIXME Concise filter
+            // Find the first service which matches the filter.
             var service = await _diningServiceCollection.Find(filter).FirstOrDefaultAsync();
 
-            if (service == null)
-            {
-                throw new ServiceNotFoundException();
-            }
+            // Throw an exception if no matching service is found.
+            if (service == null) throw new ServiceNotFoundException();
 
+            // Return the service.
             return service;
         }
 
+        /// <summary>
+        /// Lookup a gaming service by ID.
+        /// </summary>
+        /// <param name="serviceId">Target gaming service ID.</param>
+        /// <returns>Matching gaming service.</returns>
         public async Task<GamingServiceDocument> GetGamingServiceById(string serviceId)
         {
+            // Build a filter to match gaming service ID with specified serviceId.
             var filter = Builders<GamingServiceDocument>.Filter.Eq(gs => gs.Id, serviceId);
+
+            // FIXME Concise filter
+            // Find the first gaming service which matches the filter.
             var service = await _gamingServiceCollection.Find(filter).FirstOrDefaultAsync();
 
-            if (service == null)
-            {
-                throw new ServiceNotFoundException();
-            }
+            // Throw an exception if the service could not be found.
+            if (service == null) throw new ServiceNotFoundException();
 
+            // Return the service
             return service;
         }
 
+        /// <summary>
+        /// Retrieve a list of venues that a manager has management access to.
+        /// </summary>
+        /// <param name="managerId">Manager ID</param>
+        /// <returns>List of Manager venue documents</returns>
         public async Task<List<ManagerVenueDocument>> GetManagerVenues(string managerId)
         {
+            // Perform an aggregation on the manager collection.
+            // Lookup venue Id list and populate with venue information.
+            // Project out the id field, and keep the venues field.
             var result = _managerCollection.Aggregate()
                 .Match(m => m.Id.Equals(managerId))
                 .Lookup("venue", "venueIds", "_id", "venues")
                 .Project<ManagerVenueAggregation>(new BsonDocument { { "_id", 0 }, { "venues", 1 } });
 
+            // Select the venues from the first result.
             var firstResult = result.First().venues;
 
-            // TODO this is very ineffecient and can be drastically improved with an aggregation pipeline
-            // TODO Lookup gaming/dining area activeService
             // Perform further lookups for active service
             var managerVenues = new List<ManagerVenueDocument>();
 
-            firstResult.ForEach(v =>
-            {
-                managerVenues.Add(new ManagerVenueDocument(v));
-            });
+            // Populate managerVenues with the venues from the first aggregation.
+            firstResult.ForEach(v => managerVenues.Add(new ManagerVenueDocument(v)));
 
             // Populate each managervenuedocument.areas.activeService by performing a round trip
-            // This is awful
-            // FIXME
+            // FIXME This is awful. Figure out an aggregation pipeline.
             foreach (var venue in managerVenues)
             {
                 foreach (var da in venue.DiningAreas)
@@ -438,73 +458,100 @@ namespace patrons_web_api.Database
                 }
             }
 
+            // Return the venues.
             return managerVenues;
         }
 
+        /// <summary>
+        /// Determine if a manager has access to a venue.
+        /// </summary>
+        /// <param name="managerId">Manager ID</param>
+        /// <param name="venueId">Target venue ID</param>
+        /// <returns>True if the manager has access, else false.</returns>
         public async Task<bool> ManagerCanAccessVenue(string managerId, string venueId)
         {
+            // Pull manager information
             var manager = await this.GetManagerById(managerId);
 
-            bool canAccess = false;
-            manager.VenueIds.ForEach(v =>
-            {
-                if (v.Equals(new ObjectId(venueId)))
-                {
-                    canAccess = true;
-                }
-            });
-
-            return canAccess;
+            // Determine if the venueId is in the manager's list of venues.
+            return manager.VenueIds.Find(v => v.Equals(new ObjectId(venueId))) != null;
         }
 
+        /// <summary>
+        /// Delete a patron from a dining check-in.
+        /// </summary>
+        /// <param name="serviceId">Target service ID</param>
+        /// <param name="tableId">Target table ID</param>
+        /// <param name="checkInId">Target check-in ID</param>
+        /// <param name="patronId">Target patron ID</param>
         public async Task DeleteDiningPatron(string serviceId, string tableId, string checkInId, string patronId)
         {
+            // Lookup the dining service.
             var service = await this.GetDiningServiceById(serviceId);
 
-            // Find the table
+            // Lookup the table.
             var table = service.Sittings.Find(s => s.Id.Equals(tableId));
+            // Throw an exception if the table doesn't exist.
             if (table == null) throw new TableNotFoundException();
 
-            // Find the checkIn
+            // Lookup the check-in.
             var checkIn = table.CheckIns.Find(ci => ci.Id.Equals(checkInId));
+            // Throw an exception if the check-in doesn't exist.
             if (checkIn == null) throw new CheckInNotFoundExcption();
 
-            // Find the patron
+            // Lookup the patron.
             var patron = checkIn.People.Find(p => p.Id.Equals(patronId));
+            // Throw an exception if the patron doesn't exist.
             if (patron == null) throw new PatronNotFoundException();
 
+            // If the table only has one check-in and the check-in only has 1 patron...
             if (table.CheckIns.Count == 1 && checkIn.People.Count == 1)
             {
+                // Build a filter to match the dining service against the service Id
+                var filter = Builders<DiningServiceDocument>.Filter.Eq(ds => ds.Id, serviceId);
+
+                // Build a pull request to remove the sitting from the service
+                var pull = Builders<DiningServiceDocument>.Update.PullFilter(ds => ds.Sittings, s => s.Id.Equals(tableId));
+
                 // Delete the sitting
-                await _diningServiceCollection.UpdateOneAsync(
-                    ds => ds.Id.Equals(serviceId),
-                    Builders<DiningServiceDocument>.Update.PullFilter(
-                        ds => ds.Sittings,
-                        s => s.Id.Equals(tableId)
-                    )
-                );
+                await _diningServiceCollection.UpdateOneAsync(filter, pull);
             }
             else if (checkIn.People.Count == 1)
             {
+                // Delete the check-in since there would be no more patrons in it.
+
+                // Build a filter to match the dining service to specified serviceId.
+                var filter = Builders<DiningServiceDocument>.Filter.Eq(ds => ds.Id, serviceId);
+
+                // Build a pull filter to remove the specified checkIn
+                var pull = Builders<DiningServiceDocument>.Update
+                    .PullFilter("sittings.$[sitting].checkIns", Builders<CheckInDocument>.Filter.Eq(ci => ci.Id, checkInId));
+
+                // Build array filters to select the sitting with matching tableId.
                 var arrayFilters = new List<ArrayFilterDefinition> {
                     new BsonDocumentArrayFilterDefinition<DiningServiceDocument>(
                         new BsonDocument("sitting._id", new ObjectId(tableId))
                     )
                 };
+                var updateOptions = new UpdateOptions { ArrayFilters = arrayFilters };
 
-                // Delete the check in
-                await _diningServiceCollection.UpdateOneAsync(
-                    ds => ds.Id.Equals(serviceId),
-                    Builders<DiningServiceDocument>.Update.PullFilter(
-                        "sittings.$[sitting].checkIns",
-                        Builders<CheckInDocument>.Filter.Eq(ci => ci.Id, checkInId)
-                    ),
-                    new UpdateOptions { ArrayFilters = arrayFilters }
-                );
+                // Delete the check in.
+                await _diningServiceCollection.UpdateOneAsync(filter, pull, updateOptions);
             }
             else
             {
-                // Delete the patron
+                // Delete only the patron.
+
+                // Build a filter to match the dining service to the specified serviceId.
+                var filter = Builders<DiningServiceDocument>.Filter.Eq(ds => ds.Id, serviceId);
+
+                // Build a pull filter to remove the patron from the checkIn.
+                var pull = Builders<DiningServiceDocument>.Update.PullFilter(
+                    "sittings.$[sitting].checkIns.$[checkIn].people",
+                    Builders<DiningPatronDocument>.Filter.Eq(p => p.Id, patronId)
+                );
+
+                // Build array filters to select the specified sitting and check-in.
                 var arrayFilters = new List<ArrayFilterDefinition> {
                     new BsonDocumentArrayFilterDefinition<DiningServiceDocument>(
                         new BsonDocument("sitting._id", new ObjectId(tableId))
@@ -513,20 +560,24 @@ namespace patrons_web_api.Database
                         new BsonDocument("checkIn._id", new ObjectId(checkInId))
                     )
                 };
+                var updateOptions = new UpdateOptions { ArrayFilters = arrayFilters };
 
-                await _diningServiceCollection.UpdateOneAsync(
-                    ds => ds.Id.Equals(serviceId),
-                    Builders<DiningServiceDocument>.Update.PullFilter(
-                        "sittings.$[sitting].checkIns.$[checkIn].people",
-                        Builders<DiningPatronDocument>.Filter.Eq(p => p.Id, patronId)
-                    ),
-                    new UpdateOptions { ArrayFilters = arrayFilters }
-                );
+                // Perform the pull filter update
+                await _diningServiceCollection.UpdateOneAsync(filter, pull, updateOptions);
             }
         }
 
+        /// <summary>
+        /// Update a dining patron with new information.
+        /// </summary>
+        /// <param name="serviceId">Target service ID</param>
+        /// <param name="tableId">Target table ID</param>
+        /// <param name="checkInId">Target check-in ID</param>
+        /// <param name="patronId">Target patron ID</param>
+        /// <param name="patron">New patron information</param>
         public async Task UpdateDiningPatron(string serviceId, string tableId, string checkInId, string patronId, DiningPatronDocument patron)
         {
+            // Build array filters to match the table, checkIn and patron.
             var arrayFilter = new List<ArrayFilterDefinition>() {
                 new BsonDocumentArrayFilterDefinition<PublicVenueDocument>
                 (
@@ -542,32 +593,47 @@ namespace patrons_web_api.Database
                 )
             };
 
+            // Perform the update, constructing the
             await _diningServiceCollection.UpdateOneAsync(
+                // Filter definition
                 Builders<DiningServiceDocument>.Filter.Eq(ds => ds.Id, serviceId),
+                // Update definition
                 Builders<DiningServiceDocument>.Update.Set("sittings.$[table].checkIns.$[checkIn].people.$[patron]", patron),
+                // Array filters
                 new UpdateOptions { ArrayFilters = arrayFilter }
             );
         }
 
+        /// <summary>
+        /// Move a dining group from one table to another, creating the table if necessary and cleaning up.
+        /// </summary>
+        /// <param name="serviceId">Target service ID</param>
+        /// <param name="tableId">Target table ID</param>
+        /// <param name="checkInId">Target check-in ID</param>
+        /// <param name="newTableNumber">New table number the group is being moved to</param>
+        /// <returns>ID of the table that the check-in is moved to.</returns>
+        /// TODO See if this function can be cleaned up or made smaller.
         public async Task<string> MoveDiningGroup(string serviceId, string tableId, string checkInId, string newTableNumber)
         {
-            // Pull the service
+            // Pull the service information.
             var service = await this.GetDiningServiceById(serviceId);
 
-            // Find the table which contains the checkIn
+            // Find the table which contains the checkIn.
             var oldTable = service.Sittings.Find(s => s.Id.Equals(tableId));
+            // Throw an exception if the table does not exist.
             if (oldTable == null) throw new TableNotFoundException();
 
-            // Find the checkIn
+            // Find the checkIn.
             var checkIn = oldTable.CheckIns.Find(ci => ci.Id.Equals(checkInId));
+            // Throw an exception if the check-in does not exist.
             if (checkIn == null) throw new CheckInNotFoundExcption();
 
-            // Find any other tables active in the service with the same table number
+            // Find any other tables active in the service with the same table number.
             var matchingTable = service.Sittings.Find(s => s.TableNumber == newTableNumber && s.IsActive);
 
             if (matchingTable == null)
             {
-                // No table matches, so a new sitting needs to be pushed
+                // No table matches, so a new sitting needs to be created.
                 var newSitting = new SittingDocument
                 {
                     Id = ObjectId.GenerateNewId().ToString(),
@@ -583,11 +649,13 @@ namespace patrons_web_api.Database
                     Builders<DiningServiceDocument>.Update.Push(ds => ds.Sittings, newSitting)
                 );
 
-                // If the old table only had one check in, delete it
+                // If the old table only had one check in, delete the table.
                 if (oldTable.CheckIns.Count == 1)
                 {
                     await _diningServiceCollection.UpdateOneAsync(
+                        // Filter
                         ds => ds.Id.Equals(serviceId),
+                        // Pull filter
                         Builders<DiningServiceDocument>.Update.PullFilter(
                             ds => ds.Sittings,
                             s => s.Id.Equals(oldTable.Id)
@@ -644,13 +712,21 @@ namespace patrons_web_api.Database
             }
         }
 
+        /// <summary>
+        /// Move a dining table to a new table number.
+        /// </summary>
+        /// <param name="serviceId">Target service ID</param>
+        /// <param name="tableId">Target table ID</param>
+        /// <param name="newTableNumber">New table number</param>
+        /// <returns>ID of new table number. May be an existing table.</returns>
         public async Task<string> MoveDiningTable(string serviceId, string tableId, string newTableNumber)
         {
-            // Pull the service
+            // Pull the service information.
             var service = await this.GetDiningServiceById(serviceId);
 
-            // Find the table which is being moved
+            // Find the table which is being moved.
             var oldTable = service.Sittings.Find(s => s.Id.Equals(tableId));
+            // Throw an exception if the table doesn't exist.
             if (oldTable == null) throw new TableNotFoundException();
 
             // Find any other tables active in the service with the same table number
@@ -658,14 +734,14 @@ namespace patrons_web_api.Database
 
             if (matchingTable == null)
             {
-                // No table matches, so we can just update the table number
+                // No table matches; only update the table number.
                 var arrayFilter = new List<ArrayFilterDefinition>{
                     new BsonDocumentArrayFilterDefinition<SittingDocument>(
                         new BsonDocument( "table._id", new ObjectId(tableId) )
                     )
                 };
 
-                // Update the sitting
+                // Update the sitting with the new table number.
                 await _diningServiceCollection.UpdateOneAsync(
                     d => d.Id.Equals(serviceId),
                     Builders<DiningServiceDocument>.Update.Set("sittings.$[table].tableNumber", newTableNumber),
@@ -676,8 +752,7 @@ namespace patrons_web_api.Database
             }
             else
             {
-                // Table which matches tableNumber cannot match the table that is being moved
-                // Ie they are the same table
+                // Throw an exception if the request attempts to move to the same table.
                 if (matchingTable.Id == tableId) throw new MatchingTableException();
 
                 var arrayFilters = new List<ArrayFilterDefinition> {
@@ -705,26 +780,43 @@ namespace patrons_web_api.Database
             }
         }
 
+        /// <summary>
+        /// Close a table in a given dining service, marking at as no longer active and unmodifiable
+        /// </summary>
+        /// <param name="serviceId">Target dining service ID</param>
+        /// <param name="tableId">Target table ID</param>
         public async Task CloseDiningTable(string serviceId, string tableId)
         {
+            // Construct array filters to match the specified table ID.
             var arrayFilters = new List<ArrayFilterDefinition> {
                 new BsonDocumentArrayFilterDefinition<DiningServiceDocument>(
                     new BsonDocument("table._id", new ObjectId(tableId))
                 )
             };
 
+            // Use the array filters to set (isActive = false) on the target table.
             await _diningServiceCollection.UpdateOneAsync(
+                // Filter definition
                 s => s.Id.Equals(serviceId),
+                // Update definition
                 Builders<DiningServiceDocument>.Update.Set("sittings.$[table].isActive", false),
+                // Update options (array filters)
                 new UpdateOptions { ArrayFilters = arrayFilters }
             );
         }
 
+        /// <summary>
+        /// Delete a gaming patron from a gaming service.
+        /// </summary>
+        /// <param name="serviceId">Target service ID</param>
+        /// <param name="patronId">Target patron ID</param>
         public async Task DeleteGamingPatron(string serviceId, string patronId)
         {
-            // Pull patron from gamingservice.patrons where patron.id = patronId
+            // Pull patron from gamingservice.patrons where patron.id = patronId.
             await _gamingServiceCollection.UpdateOneAsync(
+                // Filter definition
                 gs => gs.Id.Equals(serviceId),
+                // Update (PullFilter) definition
                 Builders<GamingServiceDocument>.Update.PullFilter(
                     gs => gs.Patrons,
                     p => p.Id.Equals(patronId)
@@ -732,56 +824,83 @@ namespace patrons_web_api.Database
             );
         }
 
+        /// <summary>
+        /// Update a gaming patron in a given gaming service with new information.
+        /// </summary>
+        /// <param name="serviceId">Target service ID</param>
+        /// <param name="patronId">Target patron ID</param>
+        /// <param name="update">New patron information</param>
         public async Task UpdateGamingPatron(string serviceId, string patronId, GamingPatronUpdateRequest update)
         {
+            // Build array filters to search for the specified patron in the gaming service.
             var arrayFilters = new List<ArrayFilterDefinition> {
                 new BsonDocumentArrayFilterDefinition<GamingServiceDocument> (
                     new BsonDocument("patron._id", new ObjectId(patronId))
                 )
             };
 
+            // Update the patron's first name, last name and phone number.
             await _gamingServiceCollection.UpdateOneAsync(
+                // Filter definition.
                 gs => gs.Id.Equals(serviceId),
+                // Update definitions to set firstName, lastName and phoneNumber.
                 Builders<GamingServiceDocument>.Update
                     .Set("patrons.$[patron].firstName", update.FirstName)
                     .Set("patrons.$[patron].lastName", update.LastName)
                     .Set("patrons.$[patron].phoneNumber", update.PhoneNumber),
+                // Use array filters to match the [patron] field.
                 new UpdateOptions { ArrayFilters = arrayFilters }
             );
         }
 
+        /// <summary>
+        /// Checkout a gaming patron from a gaming service. Marking them as no longer active.
+        /// </summary>
+        /// <param name="serviceId">Target service ID</param>
+        /// <param name="patronId">Target patron ID</param>
         public async Task CheckOutGamingPatron(string serviceId, string patronId)
         {
+            // Build array filters to match the patron to the specified patronId.
             var arrayFilters = new List<ArrayFilterDefinition> {
                 new BsonDocumentArrayFilterDefinition<GamingServiceDocument>(
                     new BsonDocument("patron._id", new ObjectId(patronId))
                 )
             };
 
+            // Perform the update of the patron's status and checkOutTime
             await _gamingServiceCollection.UpdateOneAsync(
+                // Filter definition.
                 gs => gs.Id.Equals(serviceId),
+                // Update definition to set [patron].isActive and [patron].checkOutTime.
                 Builders<GamingServiceDocument>.Update
                     .Set("patrons.$[patron].isActive", false)
                     .Set("patrons.$[patron].checkOutTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()),
+                // Array filters which match [patron].
                 new UpdateOptions { ArrayFilters = arrayFilters }
             );
         }
 
+        /// <summary>
+        /// Attempt to start a new dining service in a specified venue area.
+        /// </summary>
+        /// <param name="venueId">Target venue ID</param>
+        /// <param name="areaId">Target area ID</param>
+        /// <returns>A newly created dining service</returns>
         public async Task<DiningServiceDocument> StartDiningService(string venueId, string areaId)
         {
-            // Pull venue
+            // Lookup venue by Id.
             var venue = await this.GetVenueById(venueId);
 
-            // Find area
+            // Find the target area within the venue.
             var area = venue.DiningAreas.Find(a => a.Id.Equals(areaId));
 
-            // Ensure area exists
+            // Throw an exception if the area does not exist.
             if (area == null) throw new AreaNotFoundException();
 
-            // Ensure area has no active service
+            // Throw an exception if the area has an active service already.
             if (area.IsOpen) throw new AreaHasActiveServiceException();
 
-            // Create a new active dining service
+            // Create a new active dining service.
             var newDiningService = new DiningServiceDocument
             {
                 Id = ObjectId.GenerateNewId().ToString(),
@@ -793,15 +912,19 @@ namespace patrons_web_api.Database
                 Sittings = new List<SittingDocument>()
             };
 
-            // Save the dining service
+            // TODO The Insert and Update should be done in a transaction to reduce errors.
+            // Save the dining service.
             await _diningServiceCollection.InsertOneAsync(newDiningService);
 
             // Update the venue area to reflect that it is open, and has a new activeService
             await _venueCollection.UpdateOneAsync(
+                // Filter definition
                 v => v.Id.Equals(venueId),
+                // Update definition to set [area].isOpen and [area].activeService
                 Builders<PublicVenueDocument>.Update
                     .Set("diningAreas.$[area].isOpen", true)
                     .Set("diningAreas.$[area].activeService", newDiningService.Id),
+                // Build array filters to match [area].
                 new UpdateOptions
                 {
                     ArrayFilters = new List<ArrayFilterDefinition>{
@@ -815,44 +938,55 @@ namespace patrons_web_api.Database
                 }
             );
 
+            // Return the newly created dining service.
             return newDiningService;
         }
 
+        /// <summary>
+        /// Start a new gaming service in a target venue area.
+        /// </summary>
+        /// <param name="venueId">Target venue ID</param>
+        /// <param name="areaId">Target area ID</param>
+        /// <returns>Newly created gaming service document</returns>
         public async Task<GamingServiceDocument> StartGamingService(string venueId, string areaId)
         {
-            // Pull venue
+            // Lookup venue by Id.
             var venue = await this.GetVenueById(venueId);
 
-            // Find area
+            // Find the target area by Id within the venue.
             var area = venue.GamingAreas.Find(ga => ga.Id.Equals(areaId));
 
-            // Ensure area exists
+            // Throw an exception if the area doesn't exist.
             if (area == null) throw new AreaNotFoundException();
 
-            // Ensure area has no active service
+            // Throw an exception if the area has an active service.
             if (area.IsOpen) throw new AreaHasActiveServiceException();
 
-            // Create a new active dining service
+            // Create a new active gaming service.
+            // TODO Section previously set the serviceType to DINING; Check if the field is actully useful.
             var newGamingService = new GamingServiceDocument
             {
                 Id = ObjectId.GenerateNewId().ToString(),
                 OpenedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 IsActive = true,
-                ServiceType = "DINING",
+                ServiceType = "GAMING",
                 AreaId = areaId,
                 VenueId = venueId,
                 Patrons = new List<GamingPatronDocument>()
             };
 
-            // Save the dining service
+            // Save the gaming service
             await _gamingServiceCollection.InsertOneAsync(newGamingService);
 
             // Update the venue area to reflect that it is open, and has a new activeService
             await _venueCollection.UpdateOneAsync(
+                // Filter definition to match the venueId
                 v => v.Id.Equals(venueId),
+                // Update definition to set [area].isOpen and [area].activeService.
                 Builders<PublicVenueDocument>.Update
                     .Set("gamingAreas.$[area].isOpen", true)
                     .Set("gamingAreas.$[area].activeService", newGamingService.Id),
+                // Build array filters to match [area].
                 new UpdateOptions
                 {
                     ArrayFilters = new List<ArrayFilterDefinition>{
@@ -869,27 +1003,32 @@ namespace patrons_web_api.Database
             return newGamingService;
         }
 
+        /// <summary>
+        /// Stop the active dinign service in a given venue area.
+        /// </summary>
+        /// <param name="venueId">Target venue Id</param>
+        /// <param name="areaId">Target area Id</param>
         public async Task StopDiningService(string venueId, string areaId)
         {
-            // Pull venue
+            // Lookup venue information by Id.
             var venue = await this.GetVenueById(venueId);
 
-            // Find area
+            // Find the target area by ID within the venue.
             var area = venue.DiningAreas.Find(a => a.Id.Equals(areaId));
 
-            // Ensure area exists
+            // Throw an exception if teh area doesn't exist.
             if (area == null) throw new AreaNotFoundException();
 
-            // Ensure area has an active service
+            // Throw an exception if the area has no active service.
             if (!area.IsOpen) throw new AreaHasNoActiveServiceException();
 
-            // Pull the active service
+            // Pull information about the active service.
             var activeService = await this.GetDiningServiceById(area.ActiveService);
 
-            // Confirm the service is not open
+            // Throw an exception if the activeService is not active. This is a strange error.
             if (!activeService.IsActive) throw new AreaHasNoActiveServiceException();
 
-            // Create array filters for venue update
+            // Create array filters for venue update to match [area].
             var arrayFilter = new List<ArrayFilterDefinition>() {
                 new BsonDocumentArrayFilterDefinition<PublicVenueDocument>
                 (
@@ -900,14 +1039,15 @@ namespace patrons_web_api.Database
                 )
             };
 
-            // Update the venue
+            // TODO Put these two updates into a transaction.
+            // Update the venue to set venue.[area].isOpen = false.
             _venueCollection.UpdateOne(
                 v => v.Id.Equals(venueId),
                 Builders<PublicVenueDocument>.Update.Set("diningAreas.$[area].isOpen", false),
                 new UpdateOptions { ArrayFilters = arrayFilter }
             );
 
-            // Update the service
+            // Update the service to set isActive = true, closedAt = now.
             _diningServiceCollection.UpdateOne(
                 ds => ds.Id.Equals(activeService.Id),
                 Builders<DiningServiceDocument>.Update
@@ -916,27 +1056,32 @@ namespace patrons_web_api.Database
             );
         }
 
+        /// <summary>
+        /// Stop the active gaming service in a target venue area.
+        /// </summary>
+        /// <param name="venueId">Target venue ID</param>
+        /// <param name="areaId">Target area ID</param>
         public async Task StopGamingService(string venueId, string areaId)
         {
-            // Pull venue
+            // Lookup venue information by ID.
             var venue = await this.GetVenueById(venueId);
 
-            // Find area
+            // Find the target venue by ID in the venue areas.
             var area = venue.GamingAreas.Find(a => a.Id.Equals(areaId));
 
-            // Ensure area exists
+            // Throw an exception if the area does not exist.
             if (area == null) throw new AreaNotFoundException();
 
-            // Ensure area has an active service
+            // Throw an exception if the area doesn't have an active service.
             if (!area.IsOpen) throw new AreaHasNoActiveServiceException();
 
-            // Pull the active service
+            // Lookup the active service information.
             var activeService = await this.GetGamingServiceById(area.ActiveService);
 
-            // Confirm the service is not open
+            // Throw an exception if the active service is not active. This is a strange error.
             if (!activeService.IsActive) throw new AreaHasNoActiveServiceException();
 
-            // Create array filters for venue update
+            // Create array filters for venue update to match [area].
             var arrayFilter = new List<ArrayFilterDefinition>() {
                 new BsonDocumentArrayFilterDefinition<PublicVenueDocument>
                 (
@@ -947,14 +1092,15 @@ namespace patrons_web_api.Database
                 )
             };
 
-            // Update the venue
+            // TODO Put these two updates into a transaction.
+            // Update the venue to set venue.[area].isOpen = false.
             _venueCollection.UpdateOne(
                 v => v.Id.Equals(venueId),
                 Builders<PublicVenueDocument>.Update.Set("gamingAreas.$[area].isOpen", false),
                 new UpdateOptions { ArrayFilters = arrayFilter }
             );
 
-            // Update the service
+            // Update the service to set isActive = false, closedAt = now.
             _gamingServiceCollection.UpdateOne(
                 ds => ds.Id.Equals(activeService.Id),
                 Builders<GamingServiceDocument>.Update
@@ -963,24 +1109,25 @@ namespace patrons_web_api.Database
             );
         }
 
+        /// <summary>
+        /// Determine if a manager can access a given service.
+        /// </summary>
+        /// <param name="managerId">Manager ID</param>
+        /// <param name="serviceId">Target service ID</param>
+        /// <returns>True if the manager has access to the service, else false</returns>
         public async Task<bool> ManagerCanAccessService(string managerId, string serviceId)
         {
-            // Retrieve a venue ID from the service collection using a projection
-            // Working with BSON documents as we cannot guarantee the service type (Dining/Gaming/etc)
+            // Retrieve a venue ID from the service collection using a projection.
+            // Work with BSON documents as we cannot guarantee the service type (Dining/Gaming/etc).
             var venueLookup = await _serviceCollection.Find(
                 Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(serviceId))
             ).Project(Builders<BsonDocument>.Projection.Include("venueId")).FirstOrDefaultAsync();
 
-            // Convert the bson field into an objectId
+            // Convert the venueId bson field into an objectId.
             ObjectId venueId = venueLookup["venueId"].AsObjectId;
 
             // Return the default operation for referencing manager and venue
             return await this.ManagerCanAccessVenue(managerId, venueId.ToString());
-        }
-
-        public Task<PublicVenueDocument> GetVenueByServiceId(string serviceId)
-        {
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -992,17 +1139,16 @@ namespace patrons_web_api.Database
         /// <returns>A user</returns>
         public async Task<MarketingUser> GetActiveMarketingUserByEmail(string email)
         {
-            // Look for a user with matching email and subscribed = true
+            // Look for a user with matching email and subscribed = true.
             var user = await _marketingUserCollection.Find(
                 Builders<MarketingUser>.Filter.Eq(mu => mu.Email, email) &
                 Builders<MarketingUser>.Filter.Eq(mu => mu.Subscribed, true)
             ).FirstOrDefaultAsync();
 
-            if (user == null)
-            {
-                throw new MarketingUserNotFoundException();
-            }
+            // Throw an exception if the marketing user doesn't exist.
+            if (user == null) throw new MarketingUserNotFoundException();
 
+            // Return the marketing user
             return user;
         }
 
@@ -1069,28 +1215,26 @@ namespace patrons_web_api.Database
             return mUnsub.Id;
         }
 
+        /// <summary>
+        /// Using a link, unsubscribe a user from marketing communications.
+        /// </summary>
+        /// <param name="unsubscribeId">Unsubscription link ID</param>
         public async Task UnsubscribeFromMarketing(string unsubscribeId)
         {
-            // Start a session for this transaction
+            // Create a transaction session.
             using (var session = _client.StartSession())
             {
                 await session.WithTransactionAsync(
                     async (s, ct) =>
                     {
-                        // Lookup the unsubscription link
+                        // Lookup the unsubscription link.
                         var mUnsub = await _marketingUnsubscribeCollection.Find(m => m.Id == unsubscribeId).FirstOrDefaultAsync();
 
-                        // If no marketing link exists with the given id, throw an error
-                        if (mUnsub == null)
-                        {
-                            throw new MarketingUnsubscribeNotFound();
-                        }
+                        // Throw an error if no marketing unsubscription matches the link.
+                        if (mUnsub == null) throw new MarketingUnsubscribeNotFound();
 
-                        // If the marketing link has already been used
-                        if (mUnsub.IsUsed)
-                        {
-                            throw new MarketingUnsubscribeAlreadyUsed();
-                        }
+                        // Throw an exception if the link has already been used.
+                        if (mUnsub.IsUsed) throw new MarketingUnsubscribeAlreadyUsed();
 
                         // Update the user
                         await _marketingUserCollection.UpdateOneAsync(
