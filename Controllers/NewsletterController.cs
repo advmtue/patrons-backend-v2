@@ -10,19 +10,32 @@ using patrons_web_api.Models.MongoDatabase;
 using patrons_web_api.Models.Transfer.Response;
 using patrons_web_api.Services;
 
+/// <summary>
+/// Controller for handling requests when prospecting users sign up to recieve newsletter information.
+/// </summary>
 namespace patrons_web_api.Controllers
 {
+    /// <summary>
+    /// Newsletter registration request.
+    /// </summary>
     public class NewsLetterRegistration
     {
+        /// <summary>
+        /// User name. Can be first name, or first name and last name.
+        /// </summary>
         [Required]
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
+        /// <summary>
+        /// User email address.
+        /// </summary>
         [Required]
         [EmailAddress]
         [JsonPropertyName("email")]
         public string Email { get; set; }
 
+        // RecaptchaV3 token.
         [Required]
         [JsonPropertyName("captcha")]
         public string Captcha { get; set; }
@@ -49,11 +62,17 @@ namespace patrons_web_api.Controllers
             _email = email;
         }
 
+        /// <summary>
+        /// Anonymous user attempts to register for patron's newsletter.
+        /// Implements recaptcha to filter out bot requests.
+        /// </summary>
+        /// <param name="registration">Newletter registration information.</param>
+        /// <returns>An empty OK status on success, or an error.</returns>
         [AllowAnonymous]
         [HttpPost("signup")]
         public async Task<IActionResult> RegisterForNewsletter(NewsLetterRegistration registration)
         {
-            // Attempt to validate the captcha code as an anti-spam mechanism
+            // Attempt to validate the captcha code as an anti-spam mechanism.
             bool captchaPassedValidation;
             try
             {
@@ -61,46 +80,51 @@ namespace patrons_web_api.Controllers
             }
             catch (Exception ex)
             {
+                // Error: Unknown error.
                 _logger.LogError(ex, "An unknown exception occurred");
 
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
             }
 
-            // If the captcha failed validation, return bad request
+            // If the captcha failed validation, return bad request.
             if (!captchaPassedValidation)
             {
+                // TODO Create a more specific error for recaptcha failures.
                 return BadRequest();
             }
 
-            // Register the email in the database
             MarketingUser marketingUser;
             try
             {
+                // Register the user's email address in the database.
                 marketingUser = await _newsletter.RegisterUser(registration.Name, registration.Email);
             }
             catch (MarketingUserAlreadySubscribedException ex)
             {
+                // Error: User is already subscribed in the database.
                 _logger.LogWarning(ex, "Failed to register marketing user. Email is already registered: {}", registration.Email);
 
                 return BadRequest(APIError.MarketingUserAlreadySubscribed());
             }
             catch (Exception ex)
             {
+                // Error: Unknown error.
                 _logger.LogError(ex, "Exception occurred when attempting to register a marketing user.");
-                return BadRequest();
+
+                return BadRequest(APIError.UnknownError());
             }
 
-
-            // Send confirmation email to the user with unsubscribe link
             try
             {
+                // Send confirmation email to the user with unsubscribe link
                 await _email.SendMarketWelcome(marketingUser);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send welcome email to user");
+                // Error: Unknown error.
+                _logger.LogError(ex, "An unknown error occurred when attempting to send marketing-welcome email.");
 
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
             }
 
             // TODO Send update email to sales@patrons.at (feeback loop boy)
@@ -108,22 +132,30 @@ namespace patrons_web_api.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Anonymous user attempts to unsubscribe an email by using an unsubscription ID.
+        /// </summary>
+        /// <param name="unsubscribeId">Unsubscribe ID.</param>
+        /// <returns>Empty OK status on success, or an error.</returns>
         [AllowAnonymous]
         [HttpDelete("unsubscribe/{unsubscribeId}")]
         public async Task<IActionResult> UnsubscribeFromMarketing([FromRoute] string unsubscribeId)
         {
             try
             {
+                // Unsubscribe the user from marketing emails.
                 await _newsletter.UnsubscribeFromMarketing(unsubscribeId);
+
+                // Return empty OK status.
+                return Ok();
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to unsubscribe user from marketing emails.");
+                // Error: Unknown error.
+                _logger.LogWarning(ex, "Failed to unsubscribe user from marketing emails due to unknown error.");
 
                 return BadRequest(APIError.UnknownError());
             }
-
-            return Ok();
         }
     }
 }

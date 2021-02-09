@@ -6,12 +6,13 @@ using patrons_web_api.Models.MongoDatabase;
 
 namespace patrons_web_api.Database
 {
+    // TODO Split the database either into partials of the class or more modular component architecture
+    // At the moment this is a monolith and I do not like it.
     public interface IPatronsDatabase
     {
         // Public venue info
         Task<PublicVenueDocument> GetVenueById(string venueId);
         Task<PublicVenueDocument> GetVenueByURLName(string urlName);
-        Task<PublicVenueDocument> GetVenueByServiceId(string serviceId);
 
 
         // Patron
@@ -28,11 +29,13 @@ namespace patrons_web_api.Database
         Task<bool> ManagerCanAccessVenue(string managerId, string venueId);
         Task<bool> ManagerCanAccessService(string managerId, string serviceId);
 
+
         // Manager -- Service Actions
         Task<DiningServiceDocument> StartDiningService(string venueId, string areaId);
         Task<GamingServiceDocument> StartGamingService(string venueId, string areaId);
         Task StopDiningService(string venueId, string areaId);
         Task StopGamingService(string venueID, string areaId);
+
 
         // Manager -- Dining Actions
         Task DeleteDiningPatron(string serviceId, string tableId, string checkInId, string patronId);
@@ -41,11 +44,13 @@ namespace patrons_web_api.Database
         Task<string> MoveDiningTable(string serviceId, string tableId, string newTableNumber);
         Task CloseDiningTable(string serviceId, string tableId);
 
+
         // Manager -- Gaming Actions
         Task DeleteGamingPatron(string serviceId, string patronId);
         Task UpdateGamingPatron(string serviceId, string patronId, GamingPatronUpdateRequest patron);
         Task CheckOutGamingPatron(string serviceId, string patronId);
 
+        // Manager -- Get dining and gaming services
         Task<DiningServiceDocument> GetDiningServiceById(string serviceId);
         Task<GamingServiceDocument> GetGamingServiceById(string serviceId);
 
