@@ -1,12 +1,12 @@
 using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
-using patrons_web_api.Services;
-using System.Threading.Tasks;
-using patrons_web_api.Database;
 
+using patrons_web_api.Database;
 using patrons_web_api.Models.Transfer.Response;
+using patrons_web_api.Services;
 
 /// <summary>
 /// Controller for handling various anonymous venue access requests.
