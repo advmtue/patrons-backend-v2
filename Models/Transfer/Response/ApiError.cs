@@ -11,6 +11,11 @@ namespace patrons_web_api.Models.Transfer.Response
             this.Code = code;
         }
 
+        public static APIError ManagerNotFound()
+        {
+            return new APIError("Manager not found", EManagerNotFound);
+        }
+
         public static APIError VenueNotFound()
         {
             return new APIError("Venue not found", EVenueNotFound);
@@ -56,6 +61,21 @@ namespace patrons_web_api.Models.Transfer.Response
             return new APIError("A matching email address is already subscribed for marketing", EMarketingUserAlreadySubscribed);
         }
 
+        public static APIError PatronNotFound()
+        {
+            return new APIError("No matching patron was found", EPatronNotFound);
+        }
+
+        public static APIError TableNotFound()
+        {
+            return new APIError("No matching table was found", ETableNotFound);
+        }
+
+        public static APIError CheckInNotFound()
+        {
+            return new APIError("No matching check-in was found", ECheckInNotFound);
+        }
+
         // Error code string constants
         const string EAreaHasNoActiveService = "E_AREA_HAS_NO_ACTIVE_SERVICE";
         const string EAreaHasActiveService = "E_AREA_HAS_ACTIVE_SERVICE";
@@ -66,5 +86,9 @@ namespace patrons_web_api.Models.Transfer.Response
         const string ENoAccess = "E_NO_ACCESS";
         const string EAreaNotFound = "E_AREA_NOT_FOUND";
         const string EMarketingUserAlreadySubscribed = "E_MARKETING_USER_SUBSCRIBED";
+        const string EManagerNotFound = "E_MANAGER_NOT_FOUND";
+        const string EPatronNotFound = "E_PATRON_NOT_FOUND";
+        const string ETableNotFound = "E_TABLE_NOT_FOUND";
+        const string ECheckInNotFound = "E_CHECKIN_NOT_FOUND";
     }
 }

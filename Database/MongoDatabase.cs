@@ -975,6 +975,7 @@ namespace patrons_web_api.Database
                 Patrons = new List<GamingPatronDocument>()
             };
 
+            // TODO Transaction
             // Save the gaming service
             await _gamingServiceCollection.InsertOneAsync(newGamingService);
 

@@ -194,8 +194,7 @@ namespace patrons_web_api.Controllers
                 // This shouldn't really occur, since the authentication handler should fail before the request gets to the endpoint.
                 _logger.LogError(e, "Session managerId resolved to unknown manager. [mId: {managerId}]", managerId);
 
-                // TODO Create a more specific error response
-                return BadRequest(APIError.UnknownError());
+                return BadRequest(APIError.ManagerNotFound());
             }
             catch (Exception e)
             {
@@ -257,8 +256,7 @@ namespace patrons_web_api.Controllers
                 // Error: Unknown error.
                 _logger.LogError(e, "Failed to retrieve manager venues. [mId: {managerId}]", managerId);
 
-                // TODO Return a specific APIError.
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
             }
         }
 
@@ -304,8 +302,7 @@ namespace patrons_web_api.Controllers
                 // Error: Unknown error.
                 _logger.LogError(e, "Failed to start dining service [vId: {venueId}]", venueId);
 
-                // TODO Return a more specific error
-                return BadRequest();
+                return BadRequest(APIError.UnknownError());
             }
         }
 
@@ -485,7 +482,27 @@ namespace patrons_web_api.Controllers
                 // Return an empty OK status.
                 return Ok();
             }
-            // TODO Table/CheckIn/Patron not found exceptions
+            catch (TableNotFoundException e)
+            {
+                // Error: Table specified could not be found.
+                _logger.LogInformation(e, "Could not find specified dining sitting to delete patron. [service: {serviceId}, sitting: {tableId}]", serviceId, tableId);
+
+                return BadRequest(APIError.TableNotFound());
+            }
+            catch (CheckInNotFoundExcption e)
+            {
+                // Error: Check-in specified could not be found.
+                _logger.LogInformation(e, "Could not find specified dining check-in to delete patron. [service: {serviceId}, sitting: {tableId}, checkIn: {checkInId}]", serviceId, tableId, checkInId);
+
+                return BadRequest(APIError.CheckInNotFound());
+            }
+            catch (PatronNotFoundException e)
+            {
+                // Error: Patron specified for deletion does not exist.
+                _logger.LogInformation(e,"Could not find specified dining patron for deletion. [mId: {managerId}, sId: {serviceId}, pId: {patronId}]", managerId, serviceId, patronId);
+
+                return BadRequest(APIError.PatronNotFound());
+            }
             catch (NoAccessException e)
             {
                 // Error: Manager does not have sufficient access to delete this patron.
@@ -532,7 +549,27 @@ namespace patrons_web_api.Controllers
                 // Return an empty OK status.
                 return Ok();
             }
-            // TODO Service/Table/Patron/etc not found exceptions
+            catch (TableNotFoundException e)
+            {
+                // Error: Table specified could not be found.
+                _logger.LogInformation(e, "Could not find specified dining sitting to update patron. [service: {serviceId}, sitting: {tableId}]", serviceId, tableId);
+
+                return BadRequest(APIError.TableNotFound());
+            }
+            catch (CheckInNotFoundExcption e)
+            {
+                // Error: Check-in specified could not be found.
+                _logger.LogInformation(e, "Could not find specified dining check-in to update patron. [service: {serviceId}, sitting: {tableId}, checkIn: {checkInId}]", serviceId, tableId, checkInId);
+
+                return BadRequest(APIError.CheckInNotFound());
+            }
+            catch (PatronNotFoundException e)
+            {
+                // Error: Patron specified for update does not exist.
+                _logger.LogInformation(e,"Could not find specified dining patron for update. [mId: {managerId}, sId: {serviceId}, pId: {patronId}]", managerId, serviceId, patronId);
+
+                return BadRequest(APIError.PatronNotFound());
+            }
             catch (NoAccessException e)
             {
                 // Error: Manager does not have sufficient access to update the dining patron.
@@ -574,7 +611,20 @@ namespace patrons_web_api.Controllers
                 // Move the dining group and return the table ID.
                 return Ok(new { TableId = await _managerService.MoveDiningGroup(managerId, serviceId, tableId, checkInId, tableNumber) });
             }
-            // TODO Various not found exceptions
+            catch (TableNotFoundException e)
+            {
+                // Error: Table specified could not be found.
+                _logger.LogInformation(e, "Could not find specified dining sitting. [service: {serviceId}, sitting: {tableId}]", serviceId, tableId);
+
+                return BadRequest(APIError.TableNotFound());
+            }
+            catch (CheckInNotFoundExcption e)
+            {
+                // Error: Check-in specified could not be found.
+                _logger.LogInformation(e, "Could not find specified dining check-in. [service: {serviceId}, sitting: {tableId}, checkIn: {checkInId}]", serviceId, tableId, checkInId);
+
+                return BadRequest(APIError.CheckInNotFound());
+            }
             catch (NoAccessException e)
             {
                 // Error: Manager does not have sufficient access to move the dining group.
@@ -614,7 +664,13 @@ namespace patrons_web_api.Controllers
                 // Move the dining group and return the table ID where it has been migrated to.
                 return Ok(new { TableId = await _managerService.MoveDiningTable(managerId, serviceId, tableId, tableNumber) });
             }
-            // TODO Various not found exceptions
+            catch (TableNotFoundException e)
+            {
+                // Error: Table specified could not be found.
+                _logger.LogInformation(e, "Could not find specified dining sitting. [service: {serviceId}, sitting: {tableId}]", serviceId, tableId);
+
+                return BadRequest(APIError.TableNotFound());
+            }
             catch (NoAccessException e)
             {
                 // Error: Manager does not have sufficient access to move the dining table.
@@ -652,7 +708,13 @@ namespace patrons_web_api.Controllers
                 // Return an empty OK status.
                 return Ok();
             }
-            // TODO Various not found exceptions
+            catch (TableNotFoundException e)
+            {
+                // Error: Table specified could not be found.
+                _logger.LogInformation(e, "Could not find specified dining sitting. [service: {serviceId}, sitting: {tableId}]", serviceId, tableId);
+
+                return BadRequest(APIError.TableNotFound());
+            }
             catch (NoAccessException e)
             {
                 // Error: Manager does not have sufficient permission to close the requested dining table.
@@ -690,7 +752,13 @@ namespace patrons_web_api.Controllers
                 // Return an empty OK status.
                 return Ok();
             }
-            // TODO Various not found exception
+            catch (PatronNotFoundException e)
+            {
+                // Error: Patron specified for deletion does not exist.
+                _logger.LogInformation(e,"Could not find specified gaming patron for deletion. [mId: {managerId}, sId: {serviceId}, pId: {patronId}]", managerId, serviceId, patronId);
+
+                return BadRequest(APIError.PatronNotFound());
+            }
             catch (NoAccessException e)
             {
                 // Error: Manager does not have sufficient access to delete the gaming patron.
@@ -716,7 +784,7 @@ namespace patrons_web_api.Controllers
         /// <returns>An empty OK status on success, or an error.</returns>
         [HttpPatch("gaming/service/{serviceId}/patron/{patronId}")]
         [Authorize(Policy = "fullAccess")]
-        public async Task<IActionResult> UpdateGamingPtron(
+        public async Task<IActionResult> UpdateGamingPatron(
             [FromRoute] string serviceId,
             [FromRoute] string patronId,
             [FromBody] GamingPatronUpdateRequest update
@@ -733,7 +801,13 @@ namespace patrons_web_api.Controllers
                 // Return an empty OK status.
                 return Ok();
             }
-            // TODO Various not found exceptions
+            catch (PatronNotFoundException e)
+            {
+                // Error: Patron specified not found.
+                _logger.LogInformation(e,"Could not find specified gaming patron for update. [mId: {managerId}, sId: {serviceId}, pId: {patronId}]", managerId, serviceId, patronId);
+
+                return BadRequest(APIError.PatronNotFound());
+            }
             catch (NoAccessException e)
             {
                 // Error: Manager does not have sufficient permission to update the gaming patron.
@@ -771,7 +845,13 @@ namespace patrons_web_api.Controllers
                 // Return an empty OK status.
                 return Ok();
             }
-            // TODO Various not found exceptions
+            catch (PatronNotFoundException e)
+            {
+                // Error: Patron specified not found.
+                _logger.LogInformation(e,"Could not find specified gaming patron for update. [mId: {managerId}, sId: {serviceId}, pId: {patronId}]", managerId, serviceId, patronId);
+
+                return BadRequest(APIError.PatronNotFound());
+            }
             catch (NoAccessException e)
             {
                 // Error: Manager does not have sufficient permissions to checkout the gaming patron.

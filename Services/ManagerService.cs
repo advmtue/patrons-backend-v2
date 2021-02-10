@@ -402,7 +402,7 @@ namespace patrons_web_api.Services
         /// <summary>
         /// Start a new dining service in a specified venue area, if one does not already exist.
         /// If the area already has an active service, this should fail.
-        /// 
+        ///
         /// Assumes that the database object will throw the error that an active service exists.
         /// </summary>
         /// <param name="managerId">Manager ID</param>
@@ -418,11 +418,10 @@ namespace patrons_web_api.Services
             return await _database.StartDiningService(venueId, areaId);
         }
 
-        // TODO Manager service should handle the logic of service being started/stopped. Also check neighbor functions for same deficit.
         /// <summary>
         /// Start a new gaming service in a specified venue area, if one does not already exist.
         /// If the area already has an active service, this should fail.
-        /// 
+        ///
         /// Assumes that the database object will throw the error that an active service exists.
         /// </summary>
         /// <param name="managerId">Manager ID</param>
