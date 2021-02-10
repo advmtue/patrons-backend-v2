@@ -89,8 +89,7 @@ namespace patrons_web_api.Controllers
             // If the captcha failed validation, return bad request.
             if (!captchaPassedValidation)
             {
-                // TODO Create a more specific error for recaptcha failures.
-                return BadRequest();
+                return BadRequest(APIError.RecaptchaFailure());
             }
 
             MarketingUser marketingUser;
@@ -126,8 +125,6 @@ namespace patrons_web_api.Controllers
 
                 return BadRequest(APIError.UnknownError());
             }
-
-            // TODO Send update email to sales@patrons.at (feeback loop boy)
 
             return Ok();
         }

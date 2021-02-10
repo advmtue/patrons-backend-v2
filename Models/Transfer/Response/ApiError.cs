@@ -76,6 +76,11 @@ namespace patrons_web_api.Models.Transfer.Response
             return new APIError("No matching check-in was found", ECheckInNotFound);
         }
 
+        public static APIError RecaptchaFailure()
+        {
+            return new APIError("Request did not pass recaptcha confidence threshold", ERecaptchaFail);
+        }
+
         // Error code string constants
         const string EAreaHasNoActiveService = "E_AREA_HAS_NO_ACTIVE_SERVICE";
         const string EAreaHasActiveService = "E_AREA_HAS_ACTIVE_SERVICE";
@@ -90,5 +95,6 @@ namespace patrons_web_api.Models.Transfer.Response
         const string EPatronNotFound = "E_PATRON_NOT_FOUND";
         const string ETableNotFound = "E_TABLE_NOT_FOUND";
         const string ECheckInNotFound = "E_CHECKIN_NOT_FOUND";
+        const string ERecaptchaFail = "E_RECAPTCHA_FAIL";
     }
 }
