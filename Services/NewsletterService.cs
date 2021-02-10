@@ -2,10 +2,10 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-using patrons_web_api.Database;
-using patrons_web_api.Models.MongoDatabase;
+using Patrons.CheckIn.API.Database;
+using Patrons.CheckIn.API.Models.MongoDatabase;
 
-namespace patrons_web_api.Services
+namespace Patrons.CheckIn.API.Services
 {
     public class MarketingUserAlreadySubscribedException : Exception { }
     public interface INewsletterService

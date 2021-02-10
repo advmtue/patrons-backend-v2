@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 
-using patrons_web_api.Services;
-using patrons_web_api.Database;
-using patrons_web_api.Models.Transfer.Response;
+using Patrons.CheckIn.API.Services;
+using Patrons.CheckIn.API.Database;
+using Patrons.CheckIn.API.Models.Transfer.Response;
 
 /// <summary>
 /// Controller and Objects for handling all management requests.
@@ -20,7 +20,7 @@ using patrons_web_api.Models.Transfer.Response;
 ///     * Reviewing/closing dining sittings
 ///     * Reviewing/checking-out gaming patrons
 /// </summary>
-namespace patrons_web_api.Controllers
+namespace Patrons.CheckIn.API.Controllers
 {
     /// <summary>
     /// Response object returned when a manager successfully logs-in.

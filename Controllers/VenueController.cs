@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 
-using patrons_web_api.Database;
-using patrons_web_api.Models.Transfer.Response;
-using patrons_web_api.Services;
+using Patrons.CheckIn.API.Database;
+using Patrons.CheckIn.API.Models.Transfer.Response;
+using Patrons.CheckIn.API.Services;
 
 /// <summary>
 /// Controller for handling various anonymous venue access requests.
@@ -15,7 +15,7 @@ using patrons_web_api.Services;
 ///     * Get venue by ID (BSON ID)
 ///     * Get venue by UrlName (eg: centra)
 /// </summary>
-namespace patrons_web_api.Controllers
+namespace Patrons.CheckIn.API.Controllers
 {
     // Allow anonymous on all routes
     [ApiController]

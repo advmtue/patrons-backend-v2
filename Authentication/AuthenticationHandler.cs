@@ -5,12 +5,12 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-using patrons_web_api.Database;
+using Patrons.CheckIn.API.Database;
 
 /// <summary>
 /// Authentication handler for Session ID style authentication mechanism.
 /// </summary>
-namespace patrons_web_api.Authentication
+namespace Patrons.CheckIn.API.Authentication
 {
     public class SessionIdAuthenticationSchemeOptions : AuthenticationSchemeOptions { }
 

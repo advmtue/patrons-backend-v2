@@ -7,9 +7,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
-using patrons_web_api.Services;
-using patrons_web_api.Models.Transfer.Response;
-using patrons_web_api.Database;
+using Patrons.CheckIn.API.Services;
+using Patrons.CheckIn.API.Models.Transfer.Response;
+using Patrons.CheckIn.API.Database;
 
 /// <summary>
 /// Controller used to handle patron check-in requests for venue areas.
@@ -18,7 +18,7 @@ using patrons_web_api.Database;
 ///     * Patron group check-in to dining areas
 ///     * Patron single check-in to gaming areas
 /// </summary>
-namespace patrons_web_api.Controllers
+namespace Patrons.CheckIn.API.Controllers
 {
     /// <summary>
     /// Dining patron for patron check-in.

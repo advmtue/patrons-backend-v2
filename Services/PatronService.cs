@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using patrons_web_api.Database;
+using Patrons.CheckIn.API.Database;
 
 using MongoDB.Bson;
 
-using patrons_web_api.Controllers;
-using patrons_web_api.Models.MongoDatabase;
+using Patrons.CheckIn.API.Controllers;
+using Patrons.CheckIn.API.Models.MongoDatabase;
 
-namespace patrons_web_api.Services
+namespace Patrons.CheckIn.API.Services
 {
     public interface IPatronService
     {

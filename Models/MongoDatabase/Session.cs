@@ -1,7 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace patrons_web_api.Database
+namespace Patrons.CheckIn.API.Database
 {
     public class SessionBase
     {

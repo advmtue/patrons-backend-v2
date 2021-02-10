@@ -1,10 +1,10 @@
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
-using patrons_web_api.Controllers;
-using patrons_web_api.Models.MongoDatabase;
+using Patrons.CheckIn.API.Controllers;
+using Patrons.CheckIn.API.Models.MongoDatabase;
 
-namespace patrons_web_api.Database
+namespace Patrons.CheckIn.API.Database
 {
     // TODO Split the database either into partials of the class or more modular component architecture
     // At the moment this is a monolith and I do not like it.
