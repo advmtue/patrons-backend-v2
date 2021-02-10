@@ -5,11 +5,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-using patrons_web_api.Database;
-using patrons_web_api.Authentication;
-using patrons_web_api.Services;
+using Patrons.CheckIn.API.Database;
+using Patrons.CheckIn.API.Authentication;
+using Patrons.CheckIn.API.Services;
 
-namespace patrons_web_api
+namespace Patrons.CheckIn.API
 {
     public class Startup
     {

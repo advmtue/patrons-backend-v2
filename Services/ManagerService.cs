@@ -5,11 +5,11 @@ using System.Text.Json.Serialization;
 
 using MongoDB.Bson;
 
-using patrons_web_api.Controllers;
-using patrons_web_api.Models.MongoDatabase;
-using patrons_web_api.Database;
+using Patrons.CheckIn.API.Controllers;
+using Patrons.CheckIn.API.Models.MongoDatabase;
+using Patrons.CheckIn.API.Database;
 
-namespace patrons_web_api.Services
+namespace Patrons.CheckIn.API.Services
 {
     /// <summary>
     /// Response object for successful login attempts.

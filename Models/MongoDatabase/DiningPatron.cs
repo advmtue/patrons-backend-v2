@@ -2,7 +2,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System.ComponentModel.DataAnnotations;
 
-namespace patrons_web_api.Models.MongoDatabase
+namespace Patrons.CheckIn.API.Models.MongoDatabase
 {
     public class DiningPatronDocument
     {

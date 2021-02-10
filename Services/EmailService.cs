@@ -7,10 +7,10 @@ using Amazon;
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
 
-using patrons_web_api.Models.MongoDatabase;
-using patrons_web_api.Database;
+using Patrons.CheckIn.API.Models.MongoDatabase;
+using Patrons.CheckIn.API.Database;
 
-namespace patrons_web_api.Services
+namespace Patrons.CheckIn.API.Services
 {
     /// <summary>
     /// Templating information for sending a marketing welcome email to new users.

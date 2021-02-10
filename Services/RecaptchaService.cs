@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 
-namespace patrons_web_api.Services
+namespace Patrons.CheckIn.API.Services
 {
     /// <summary>
     /// Configuration settings for recaptcha

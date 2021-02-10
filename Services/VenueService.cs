@@ -1,8 +1,8 @@
 using System.Threading.Tasks;
-using patrons_web_api.Models.MongoDatabase;
-using patrons_web_api.Database;
+using Patrons.CheckIn.API.Models.MongoDatabase;
+using Patrons.CheckIn.API.Database;
 
-namespace patrons_web_api.Services
+namespace Patrons.CheckIn.API.Services
 {
     public interface IVenueService
     {

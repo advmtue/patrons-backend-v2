@@ -1,4 +1,4 @@
-namespace patrons_web_api.Models.Transfer.Response
+namespace Patrons.CheckIn.API.Models.Transfer.Response
 {
     public class APIError
     {

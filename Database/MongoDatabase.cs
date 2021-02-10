@@ -5,10 +5,10 @@ using MongoDB.Driver;
 using MongoDB.Bson;
 using System.Threading.Tasks;
 
-using patrons_web_api.Models.MongoDatabase;
-using patrons_web_api.Controllers;
+using Patrons.CheckIn.API.Models.MongoDatabase;
+using Patrons.CheckIn.API.Controllers;
 
-namespace patrons_web_api.Database
+namespace Patrons.CheckIn.API.Database
 {
     // TODO Namespace exceptions somewhere else
     public class VenueNotFoundException : Exception { }
@@ -253,7 +253,7 @@ namespace patrons_web_api.Database
         /// </summary>
         /// <param name="username">Username</param>
         /// <returns>The manager with matching username</returns>
-        /// <exception cref="patrons_web_api.Database.ManagerNotFoundException">
+        /// <exception cref="Patrons.CheckIn.API.Database.ManagerNotFoundException">
         /// Manager with matching username does not exist
         /// </exception>
         public async Task<ManagerDocument> GetManagerByUsername(string username)

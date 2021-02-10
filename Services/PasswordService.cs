@@ -2,7 +2,7 @@ using System;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 
-namespace patrons_web_api.Services
+namespace Patrons.CheckIn.API.Services
 {
     /// <summary>
     /// A hashed password string with accompanying salt.

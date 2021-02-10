@@ -2,9 +2,9 @@ using System;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
-using patrons_web_api.Database;
+using Patrons.CheckIn.API.Database;
 
-namespace patrons_web_api.Services
+namespace Patrons.CheckIn.API.Services
 {
     /// <summary>
     /// Session service configuration.

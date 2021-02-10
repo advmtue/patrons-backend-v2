@@ -6,14 +6,14 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
 
-using patrons_web_api.Models.MongoDatabase;
-using patrons_web_api.Models.Transfer.Response;
-using patrons_web_api.Services;
+using Patrons.CheckIn.API.Models.MongoDatabase;
+using Patrons.CheckIn.API.Models.Transfer.Response;
+using Patrons.CheckIn.API.Services;
 
 /// <summary>
 /// Controller for handling requests when prospecting users sign up to recieve newsletter information.
 /// </summary>
-namespace patrons_web_api.Controllers
+namespace Patrons.CheckIn.API.Controllers
 {
     /// <summary>
     /// Newsletter registration request.

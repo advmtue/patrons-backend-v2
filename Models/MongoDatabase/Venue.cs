@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace patrons_web_api.Models.MongoDatabase
+namespace Patrons.CheckIn.API.Models.MongoDatabase
 {
 
     public class CallsToAction
