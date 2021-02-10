@@ -81,6 +81,11 @@ namespace patrons_web_api.Models.Transfer.Response
             return new APIError("Request did not pass recaptcha confidence threshold", ERecaptchaFail);
         }
 
+        public static APIError AreaHasNoService()
+        {
+            return new APIError("Area has no active service", ENoService);
+        }
+
         // Error code string constants
         const string EAreaHasNoActiveService = "E_AREA_HAS_NO_ACTIVE_SERVICE";
         const string EAreaHasActiveService = "E_AREA_HAS_ACTIVE_SERVICE";
@@ -96,5 +101,6 @@ namespace patrons_web_api.Models.Transfer.Response
         const string ETableNotFound = "E_TABLE_NOT_FOUND";
         const string ECheckInNotFound = "E_CHECKIN_NOT_FOUND";
         const string ERecaptchaFail = "E_RECAPTCHA_FAIL";
+        const string ENoService = "E_NO_SERVICE";
     }
 }

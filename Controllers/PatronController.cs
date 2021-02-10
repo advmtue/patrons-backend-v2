@@ -9,10 +9,11 @@ using Microsoft.AspNetCore.Authorization;
 
 using patrons_web_api.Services;
 using patrons_web_api.Models.Transfer.Response;
+using patrons_web_api.Database;
 
 /// <summary>
 /// Controller used to handle patron check-in requests for venue areas.
-/// 
+///
 /// Examples of such requests include:
 ///     * Patron group check-in to dining areas
 ///     * Patron single check-in to gaming areas
@@ -122,7 +123,19 @@ namespace patrons_web_api.Controllers
                 // Return an empty OK status.
                 return Ok();
             }
-            // TODO Various not found exceptions.
+            catch (VenueNotFoundException e)
+            {
+                // Error: Venue could not be found.
+                _logger.LogInformation(e, "Venue could not be found to complete gaming check-in. [vId: {venueId}]", venueId);
+
+                return BadRequest(APIError.VenueNotFound());
+            }
+            catch (AreaNotFoundException e)
+            {
+                _logger.LogInformation(e, "Could not find a gaming area in specified venue. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+
+                return BadRequest(APIError.AreaNotFound());
+            }
             catch (Exception e)
             {
                 // Error: Unknown error.
@@ -154,7 +167,27 @@ namespace patrons_web_api.Controllers
                 // Return empty OK status.
                 return Ok();
             }
-            // TODO Various not found exceptions
+            catch (VenueNotFoundException e)
+            {
+                // Error: Venue could not be found.
+                _logger.LogInformation(e, "Venue could not be found to complete dining check-in. [vId: {venueId}]", venueId);
+
+                return BadRequest(APIError.VenueNotFound());
+            }
+            catch (AreaNotFoundException e)
+            {
+                // Error: Are could not be found.
+                _logger.LogInformation(e, "Could not find a dining area in specified venue. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+
+                return BadRequest(APIError.AreaNotFound());
+            }
+            catch (ServiceNotFoundException e)
+            {
+                // Error: There is no active service in the specified area.
+                _logger.LogInformation(e, "Venue area does not have an active service. [vId: {venueId}, aId: {areaId}]", venueId, areaId);
+
+                return BadRequest(APIError.AreaHasNoService());
+            }
             catch (Exception e)
             {
                 // Error: Unknown error.
