@@ -12,7 +12,7 @@ using patrons_web_api.Models.Transfer.Response;
 
 /// <summary>
 /// Controller and Objects for handling all management requests.
-/// 
+///
 /// Examples of such requests:
 ///     * Starting/Stopping dining and gaming services
 ///     * Reviewing patrons, guests, checkIns, sittings, etc in dining and gaming services
@@ -152,9 +152,11 @@ namespace patrons_web_api.Controllers
         {
             try
             {
-                // TODO Fix the IPAdress field to use an actual address from the HTTP Context.
+                // Pull IP address from X-Forwarded-For.
+                string ipAddress = HttpContext.Connection.RemoteIpAddress.ToString();
+
                 // Attempt to perform a login, returning a ManagerLoginResponse on success
-                return Ok(await _managerService.Login(login, "unknown"));
+                return Ok(await _managerService.Login(login, ipAddress));
             }
             catch (BadLoginException)
             {
