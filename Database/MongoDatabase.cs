@@ -305,11 +305,9 @@ namespace patrons_web_api.Database
         /// <returns></returns>
         public async Task<SessionDocument> GetSessionBySessionId(string sessionId)
         {
-            // Build a filter to match session.sessionId to sessionId.
-            var filter = Builders<SessionDocument>.Filter.Eq(s => s.SessionId, sessionId);
-
-            // FIXME Put simple filter in the .Find to make more concise.
-            var session = await _sessionCollection.Find(filter).FirstOrDefaultAsync();
+            var session = await _sessionCollection
+                .Find(s => s.SessionId == sessionId)
+                .FirstOrDefaultAsync();
 
             // Throw an exception if the session does not exist.
             if (session == null) throw new SessionNotFoundException();
@@ -325,11 +323,10 @@ namespace patrons_web_api.Database
         /// <returns>Matching manager.</returns>
         public async Task<ManagerDocument> GetManagerById(string managerId)
         {
-            // FIXME Make this much nicer
             // Find a manager whose ID matches supplied managerId.
-            var manager = await _managerCollection.Find(
-                Builders<ManagerDocument>.Filter.Eq(m => m.Id, managerId)
-            ).FirstAsync();
+            var manager = await _managerCollection
+                .Find(m => m.Id == managerId)
+                .FirstAsync();
 
             // Throw an exception if no manager is found.
             if (manager == null) throw new ManagerNotFoundException();
@@ -382,12 +379,10 @@ namespace patrons_web_api.Database
         /// <returns>The dining service.</returns>
         public async Task<DiningServiceDocument> GetDiningServiceById(string serviceId)
         {
-            // Build a filter to match dining service ID to specified serviceId.
-            var filter = Builders<DiningServiceDocument>.Filter.Eq(ds => ds.Id, serviceId);
-
-            // FIXME Concise filter
             // Find the first service which matches the filter.
-            var service = await _diningServiceCollection.Find(filter).FirstOrDefaultAsync();
+            var service = await _diningServiceCollection
+                .Find(ds => ds.Id == serviceId)
+                .FirstOrDefaultAsync();
 
             // Throw an exception if no matching service is found.
             if (service == null) throw new ServiceNotFoundException();
@@ -403,12 +398,10 @@ namespace patrons_web_api.Database
         /// <returns>Matching gaming service.</returns>
         public async Task<GamingServiceDocument> GetGamingServiceById(string serviceId)
         {
-            // Build a filter to match gaming service ID with specified serviceId.
-            var filter = Builders<GamingServiceDocument>.Filter.Eq(gs => gs.Id, serviceId);
-
-            // FIXME Concise filter
             // Find the first gaming service which matches the filter.
-            var service = await _gamingServiceCollection.Find(filter).FirstOrDefaultAsync();
+            var service = await _gamingServiceCollection
+                .Find(gs => gs.Id == serviceId)
+                .FirstOrDefaultAsync();
 
             // Throw an exception if the service could not be found.
             if (service == null) throw new ServiceNotFoundException();
@@ -963,7 +956,6 @@ namespace patrons_web_api.Database
             if (area.IsOpen) throw new AreaHasActiveServiceException();
 
             // Create a new active gaming service.
-            // TODO Section previously set the serviceType to DINING; Check if the field is actully useful.
             var newGamingService = new GamingServiceDocument
             {
                 Id = ObjectId.GenerateNewId().ToString(),
