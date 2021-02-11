@@ -35,6 +35,9 @@ namespace Patrons.CheckIn.API.Services
         /// <returns>Marketing user as saved in the database.</returns>
         public async Task<MarketingUser> RegisterUser(string name, string email)
         {
+            // Ensure name and email aren't null
+            if (name == null || email == null) throw new ArgumentNullException();
+
             MarketingUser mu;
             try
             {
@@ -61,6 +64,9 @@ namespace Patrons.CheckIn.API.Services
         /// <returns></returns>
         public async Task UnsubscribeFromMarketing(string unsubscribeId)
         {
+            // Ensure the unsubscribeId is not null.
+            if (unsubscribeId == null) throw new ArgumentNullException();
+
             // Unsubscribe the user.
             await _database.UnsubscribeFromMarketing(unsubscribeId);
         }
