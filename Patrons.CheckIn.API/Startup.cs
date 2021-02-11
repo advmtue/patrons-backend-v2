@@ -5,6 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
+using Amazon;
+using Amazon.SimpleEmail;
+
 using Patrons.CheckIn.API.Database;
 using Patrons.CheckIn.API.Authentication;
 using Patrons.CheckIn.API.Services;
@@ -56,6 +59,9 @@ namespace Patrons.CheckIn.API
             services.AddSingleton<IMongoDatabaseSettings>(sp => sp.GetRequiredService<IOptions<MongoDatabaseSettings>>().Value);
             services.AddSingleton<ISessionSettings>(sp => sp.GetRequiredService<IOptions<SessionSettings>>().Value);
             services.AddSingleton<IRecaptchaV3Settings>(sp => sp.GetRequiredService<IOptions<RecaptchaV3Settings>>().Value);
+
+            // AWS SES
+            services.AddSingleton<IAmazonSimpleEmailService>(new AmazonSimpleEmailServiceClient(RegionEndpoint.APSoutheast2));
 
             // Register injectables for IoC injector
             services.AddSingleton<IPatronsDatabase, MongoDatabase>();

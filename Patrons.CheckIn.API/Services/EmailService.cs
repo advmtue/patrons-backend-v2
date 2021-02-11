@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using Amazon;
+
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
 
@@ -49,16 +49,18 @@ namespace Patrons.CheckIn.API.Services
     public class EmailService : IEmailService
     {
         private readonly ILogger<EmailService> _logger;
-        private readonly AmazonSimpleEmailServiceClient _emailClient;
+        private readonly IAmazonSimpleEmailService _emailClient;
         private readonly IPatronsDatabase _database;
 
-        public EmailService(ILogger<EmailService> logger, IPatronsDatabase database)
+        public EmailService(
+                ILogger<EmailService> logger,
+                IPatronsDatabase database,
+                IAmazonSimpleEmailService emailClient)
         {
+            // Save refs
             _logger = logger;
             _database = database;
-
-            // Create a new email client
-            _emailClient = new AmazonSimpleEmailServiceClient(RegionEndpoint.APSoutheast2);
+            _emailClient = emailClient;
         }
 
         /// <summary>
