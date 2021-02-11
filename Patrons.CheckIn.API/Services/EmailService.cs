@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+
+using Microsoft.Extensions.Logging;
 
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
@@ -70,6 +72,9 @@ namespace Patrons.CheckIn.API.Services
         /// <returns>None.</returns>
         public async Task SendMarketWelcome(MarketingUser mUser)
         {
+            // Ensure the mUser is not null.
+            if (mUser == null || mUser.Name == null || mUser.Email == null) throw new ArgumentNullException();
+
             // Create information for a new marketing email
             var data = new MarketingWelcomeEmail
             {
