@@ -8,6 +8,7 @@ using Patrons.CheckIn.API.Models.MongoDatabase;
 namespace Patrons.CheckIn.API.Services
 {
     public class MarketingUserAlreadySubscribedException : Exception { }
+
     public interface INewsletterService
     {
         Task<MarketingUser> RegisterUser(string name, string email);

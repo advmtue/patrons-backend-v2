@@ -21,6 +21,15 @@ namespace Patrons.CheckIn.API.Services
         public string Salt { get; set; }
     }
 
+    public interface IPasswordService {
+        public HashedPasswordWithSalt CreatePassword(string password);
+
+        public HashedPasswordWithSalt RegeneratePassword(string password, string salt);
+
+        public bool IsPasswordMatch(string clearTextPassword, string salt, string passwordHash);
+    }
+
+
     public class PasswordService
     {
         public PasswordService() { }
@@ -49,6 +58,9 @@ namespace Patrons.CheckIn.API.Services
         /// <returns>Hashed password and salt combination.</returns>
         public HashedPasswordWithSalt CreatePassword(string password)
         {
+            // Ensure that the password is not null or an empty string.
+            if (password == null || password == "") throw new ArgumentNullException();
+
             // Generate a cryptographically secure salt.
             // https://docs.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/password-hashing?view=aspnetcore-5.0
             byte[] salt = new byte[128 / 8];
@@ -76,6 +88,9 @@ namespace Patrons.CheckIn.API.Services
         /// <returns></returns>
         public HashedPasswordWithSalt RegeneratePassword(string password, string salt)
         {
+            // Ensure the password and salt are not null.
+            if (password == null || salt == null) throw new ArgumentNullException();
+
             // Convert salt string into bytes.
             byte[] saltBytes = Convert.FromBase64String(salt);
 
@@ -99,6 +114,11 @@ namespace Patrons.CheckIn.API.Services
         /// <returns>True if the clear-text + salt combination is congruent to the hash</returns>
         public bool IsPasswordMatch(string clearTextPassword, string salt, string passwordHash)
         {
+            if (clearTextPassword == null || salt == null || passwordHash == null)
+            {
+                throw new ArgumentNullException();
+            }
+
             var hashedClearText = RegeneratePassword(clearTextPassword, salt);
 
             return hashedClearText.HashedPassword == passwordHash;
