@@ -80,12 +80,16 @@ namespace Patrons.CheckIn.API.Services
     {
         private IRecaptchaV3Settings _settings;
         private readonly ILogger<RecaptchaService> _logger;
-        private readonly HttpClient _client = new HttpClient();
+        private readonly HttpClient _client;
 
-        public RecaptchaService(IRecaptchaV3Settings settings, ILogger<RecaptchaService> logger)
+        public RecaptchaService(
+                IRecaptchaV3Settings settings,
+                ILogger<RecaptchaService> logger,
+                HttpClient client)
         {
             _settings = settings;
             _logger = logger;
+            _client = client;
         }
 
         /// <summary>

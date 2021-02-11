@@ -1,3 +1,5 @@
+using System.Net.Http;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -62,6 +64,9 @@ namespace Patrons.CheckIn.API
 
             // AWS SES
             services.AddSingleton<IAmazonSimpleEmailService>(new AmazonSimpleEmailServiceClient(RegionEndpoint.APSoutheast2));
+
+            // HTTP Client
+            services.AddSingleton<HttpClient, HttpClient>();
 
             // Register injectables for IoC injector
             services.AddSingleton<IPatronsDatabase, MongoDatabase>();
