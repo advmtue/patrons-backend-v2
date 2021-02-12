@@ -56,11 +56,13 @@ namespace Patrons.CheckIn.API
             // Configs
             services.Configure<MongoDatabaseSettings>(Configuration.GetSection(nameof(MongoDatabaseSettings)));
             services.Configure<SessionSettings>(Configuration.GetSection(nameof(SessionSettings)));
-            services.Configure<RecaptchaV3Settings>(Configuration.GetSection(nameof(RecaptchaV3Settings)));
+            services.Configure<RecaptchaValidationSettings>(Configuration.GetSection("RecaptchaV3Settings"));
+            services.Configure<RecaptchaWebSettings>(Configuration.GetSection("RecaptchaV3Settings"));
 
             services.AddSingleton<IMongoDatabaseSettings>(sp => sp.GetRequiredService<IOptions<MongoDatabaseSettings>>().Value);
             services.AddSingleton<ISessionSettings>(sp => sp.GetRequiredService<IOptions<SessionSettings>>().Value);
-            services.AddSingleton<IRecaptchaV3Settings>(sp => sp.GetRequiredService<IOptions<RecaptchaV3Settings>>().Value);
+            services.AddSingleton<IRecaptchaValidationSettings>(sp => sp.GetRequiredService<IOptions<RecaptchaValidationSettings>>().Value);
+            services.AddSingleton<IRecaptchaWebSettings>(sp => sp.GetRequiredService<IOptions<RecaptchaWebSettings>>().Value);
 
             // AWS SES
             services.AddSingleton<IAmazonSimpleEmailService>(new AmazonSimpleEmailServiceClient(RegionEndpoint.APSoutheast2));
@@ -75,7 +77,8 @@ namespace Patrons.CheckIn.API
             services.AddSingleton<IPatronService, PatronService>();
             services.AddSingleton<PasswordService>();
             services.AddSingleton<ISessionService, SessionService>();
-            services.AddSingleton<IRecaptchaService, RecaptchaService>();
+            services.AddSingleton<IRecaptchaWebService, RecaptchaWebService>();
+            services.AddSingleton<IRecaptchaValidationService, RecaptchaValidationService>();
             services.AddSingleton<INewsletterService, NewsletterService>();
             services.AddSingleton<IEmailService, EmailService>();
 

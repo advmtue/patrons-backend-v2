@@ -46,13 +46,13 @@ namespace Patrons.CheckIn.API.Controllers
     public class NewsletterController : ControllerBase
     {
         private readonly ILogger<NewsletterController> _logger;
-        private IRecaptchaService _captcha;
+        private IRecaptchaValidationService _captcha;
         private INewsletterService _newsletter;
         private IEmailService _email;
 
         public NewsletterController(
             ILogger<NewsletterController> logger,
-            IRecaptchaService captcha,
+            IRecaptchaValidationService captcha,
             INewsletterService newsletter,
             IEmailService email)
         {
