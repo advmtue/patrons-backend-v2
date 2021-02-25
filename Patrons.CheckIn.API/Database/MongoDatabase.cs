@@ -616,6 +616,8 @@ namespace Patrons.CheckIn.API.Database
             // Throw an exception if the table does not exist.
             if (oldTable == null) throw new TableNotFoundException();
 
+            // FIXME TableIsNotActiveException
+
             // Find the checkIn.
             var checkIn = oldTable.CheckIns.Find(ci => ci.Id.Equals(checkInId));
             // Throw an exception if the check-in does not exist.

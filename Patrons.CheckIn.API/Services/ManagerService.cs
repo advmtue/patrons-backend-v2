@@ -65,10 +65,10 @@ namespace Patrons.CheckIn.API.Services
     public class ManagerService : IManagerService
     {
         private IPatronsDatabase _database;
-        private PasswordService _password;
+        private IPasswordService _password;
         private ISessionService _session;
 
-        public ManagerService(IPatronsDatabase db, PasswordService pwd, ISessionService session)
+        public ManagerService(IPatronsDatabase db, IPasswordService pwd, ISessionService session)
         {
             _database = db;
             _password = pwd;
@@ -110,6 +110,15 @@ namespace Patrons.CheckIn.API.Services
         /// <param name="ipAddress">IP Address of request</param>
         public async Task<ManagerLoginResponse> Login(ManagerLoginRequest loginInfo, string ipAddress)
         {
+            // Throw an ArgumentNullException if loginInfo or any of it's fields are null.
+            if (loginInfo == null || loginInfo.Username == null || loginInfo.Password == null)
+            {
+                throw new ArgumentNullException();
+            }
+
+            // Throw an ArgumentNullException if the IpAddress is null.
+            if (ipAddress == null) throw new ArgumentNullException();
+
             // Pull manager information from database.
             var manager = await _database.GetManagerByUsername(loginInfo.Username);
 
@@ -163,6 +172,9 @@ namespace Patrons.CheckIn.API.Services
         /// <returns>Manager information</returns>
         public async Task<ManagerResponse> GetSelf(string managerId)
         {
+            // Throw an ArgumentNullException if the manager ID is null.
+            if (managerId == null) throw new ArgumentNullException();
+
             // Lookup the manager.
             var manager = await _database.GetManagerById(managerId);
 
@@ -184,7 +196,10 @@ namespace Patrons.CheckIn.API.Services
         /// <returns></returns>
         public async Task UpdatePassword(string managerId, string newPassword)
         {
-            // Lookup manager information so that we have access to the salt.
+            // Throw an ArgumentNullException if managerId or newPassword is null.
+            if (managerId == null || newPassword == null) throw new ArgumentNullException();
+
+            // Lookup manager to ensure that it exists.
             var manager = await _database.GetManagerById(managerId);
 
             // Create a new password hash using the original manager salt.
@@ -202,10 +217,13 @@ namespace Patrons.CheckIn.API.Services
         /// </summary>
         /// <param name="managerId">Manager ID</param>
         /// <returns>Manager information for venues that the manager can access.</returns>
-        public async Task<List<ManagerVenueDocument>> GetVenues(string managerId)
+        public Task<List<ManagerVenueDocument>> GetVenues(string managerId)
         {
+            // Throw an ArgumentNullException if the managerId is null.
+            if (managerId == null) throw new ArgumentNullException();
+
             // Pull manager venue information.
-            return await _database.GetManagerVenues(managerId);
+            return _database.GetManagerVenues(managerId);
         }
 
         /// <summary>
@@ -216,8 +234,19 @@ namespace Patrons.CheckIn.API.Services
         /// <param name="tableId">Target table ID</param>
         /// <param name="checkInId">Target check-in ID</param>
         /// <param name="patronId">Target patron ID</param>
-        public async Task DeleteDiningPatron(string managerId, string serviceId, string tableId, string checkInId, string patronId)
+        public async Task DeleteDiningPatron(
+                string managerId,
+                string serviceId,
+                string tableId,
+                string checkInId,
+                string patronId)
         {
+            // Throw an ArgumentNullException if any supplied parameters is null.
+            if (managerId == null || serviceId == null || tableId == null || checkInId == null || patronId == null)
+            {
+                throw new ArgumentNullException();
+            }
+
             // Ensure manager has access to the given venue.
             await _EnsureManagerCanAccessService(managerId, serviceId);
 
@@ -234,8 +263,20 @@ namespace Patrons.CheckIn.API.Services
         /// <param name="checkInId">Target check-in ID</param>
         /// <param name="patronId">Target patron ID</param>
         /// <param name="update">New patron information</param>
-        public async Task UpdateDiningPatron(string managerId, string serviceId, string tableId, string checkInId, string patronId, DiningPatronUpdateRequest update)
+        public async Task UpdateDiningPatron(
+                string managerId,
+                string serviceId,
+                string tableId,
+                string checkInId,
+                string patronId,
+                DiningPatronUpdateRequest update)
         {
+            // If any argument is null throw an ArgumentNullException.
+            if (managerId == null || serviceId == null || tableId == null || checkInId == null || patronId == null || update == null)
+            {
+                throw new ArgumentNullException();
+            }
+
             // Ensure the manager has access to the given service.
             await _EnsureManagerCanAccessService(managerId, serviceId);
 
@@ -276,8 +317,24 @@ namespace Patrons.CheckIn.API.Services
         /// <param name="tableId">Target table ID</param>
         /// <param name="checkInId">Target check-in ID</param>
         /// <param name="newTableNumber">New table number</param>
-        public async Task<string> MoveDiningGroup(string managerId, string serviceId, string tableId, string checkInId, string newTableNumber)
+        // TODO Do some analysis of whether this needs to throw NotFound exceptions or if that's for the DB.
+        public async Task<string> MoveDiningGroup(
+            string managerId,
+            string serviceId,
+            string tableId,
+            string checkInId,
+            string newTableNumber)
         {
+            // If any paramters are null, throw an ArgumentNullException.
+            if (managerId == null
+                || serviceId == null
+                || tableId == null
+                || checkInId == null
+                || newTableNumber == null)
+            {
+                throw new ArgumentNullException();
+            }
+
             // Ensure the manager has access to the given service.
             await _EnsureManagerCanAccessService(managerId, serviceId);
 
@@ -301,6 +358,12 @@ namespace Patrons.CheckIn.API.Services
         /// <returns>A task that resolves to the new table ID upon completion.</returns>
         public async Task<string> MoveDiningTable(string managerId, string serviceId, string tableId, string newTableNumber)
         {
+            // Throw an ArgumentNullException if any parameters are null.
+            if (managerId == null || serviceId == null || tableId == null || newTableNumber == null)
+            {
+                throw new ArgumentNullException();
+            }
+
             // Ensure the manager has access to the given service.
             await _EnsureManagerCanAccessService(managerId, serviceId);
 
